@@ -31,9 +31,9 @@ pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
                         KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('Q') => {
                             app_state.exit = true;
                         }
-                        // KeyCode::Char('s') => {
-                        //     app_state.current_screen = crate::app::CurrentScreen::StartStop
-                        // }
+                        KeyCode::Char('s') => {
+                            app_state.current_screen = crate::app::CurrentScreen::StartStop
+                        }
                         _ => {}
                     }
                 }
