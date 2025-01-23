@@ -22,6 +22,7 @@ pub fn render(frame: &mut Frame, app_state: &mut State) {
             render_header(frame, app_state, layout[0]);
             render_vms_list(frame, app_state, layout[1]);
             render_start_stop_popup(frame, app_state);
+            app_state.start_stop_vm();
         }
     }
     // TODO : toggable log block ?
@@ -66,9 +67,9 @@ fn render_vms_list(frame: &mut Frame, app_state: &mut State, area: Rect) {
         .vms
         .iter()
         .map(|vm| {
-            let (running_str, running_color) = match vm.running {
-                true => ("  Yes".to_owned(), Color::Indexed(74)),
-                false => ("   No".to_owned(), Color::Indexed(202)),
+            let (running_str, running_color) = match vm.pid {
+                Some(_) => ("  Yes".to_owned(), Color::Indexed(74)),
+                None => ("   No".to_owned(), Color::Indexed(202)),
             };
             Row::new(vec![format!(" {}", vm.name), running_str])
                 .style(Style::new().fg(running_color))
@@ -105,9 +106,9 @@ fn render_start_stop_popup(frame: &mut Frame, app_state: &mut State) {
         let popup_block = Block::default()
             .title(format!(
                 " {} '{}' VM ",
-                match current_vm.running {
-                    true => "Stopping",  // The VM is running, we want to stop it
-                    false => "Starting", // The VM is *not* running, we want to start it
+                match current_vm.pid {
+                    Some(_) => "Stopping", // The VM is running, we want to stop it
+                    None => "Starting",    // The VM is *not* running, we want to start it
                 },
                 current_vm.name
             ))

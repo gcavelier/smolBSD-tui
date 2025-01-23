@@ -1,5 +1,9 @@
 use ratatui::widgets::TableState;
-use std::{collections::HashMap, fs::DirEntry, path::Path};
+use std::{
+    collections::HashMap,
+    fs::{read_to_string, DirEntry},
+    path::Path,
+};
 
 pub enum CurrentScreen {
     List,
@@ -8,9 +12,9 @@ pub enum CurrentScreen {
 
 #[derive(Debug)]
 pub struct Vm {
-    pub name: String,
+    pub name: String, // Name of the config file
     config_data: HashMap<String, String>,
-    pub running: bool,
+    pub pid: Option<i32>,
     pub cpu_usage: u8,
 }
 pub struct State {
@@ -39,6 +43,15 @@ impl State {
             current_screen: CurrentScreen::List,
             exit: false,
         })
+    }
+    pub fn start_stop_vm(&mut self) {
+        if let Some(current_vm) = self.vms.get(self.selected_vm_idx) {
+            // match current_vm.running {
+            //     true => {kill(pid, sig)}
+            //     false => std::process::Command::new(format!("{}/startnb.sh", self.base_dir))
+            //         .args(["-f", "", "-d"]),
+            // }
+        }
     }
 }
 
@@ -75,17 +88,34 @@ fn get_vms(directory: &str) -> Result<Vec<Vm>, Box<dyn std::error::Error>> {
                         .collect();
                     // If the hashmap doesn't contain the 'vm' key, we discard it
                     match hashmap.get("vm") {
-                        Some(_) => Some(hashmap),
+                        Some(_) => Some((
+                            hashmap,
+                            vm_conf_file
+                                .file_name()
+                                .into_string()
+                                .unwrap_or("".to_string()),
+                        )),
                         None => None,
                     }
                 })
-                .map(|mut config_data| {
-                    // We already checked that the 'vm' key exists, so the call to unwrap() will always succeed
-                    let (_, name) = config_data.remove_entry("vm").unwrap().to_owned();
+                .map(|(config_data, vm_conf_file)| {
+                    let pid_file = format!(
+                        "{directory}/../qemu-{}.pid",
+                        vm_conf_file.strip_suffix(".conf").unwrap() // We filtered the files ending with '.conf', so this unwrap() always succeed
+                    );
                     Vm {
-                        name: name.to_owned(),
+                        pid: match Path::new(&pid_file).exists() {
+                            false => None,
+                            true => match read_to_string(pid_file) {
+                                Ok(res) => match res.trim().parse() {
+                                    Ok(value) => Some(value),
+                                    Err(_) => None,
+                                },
+                                Err(_) => None,
+                            },
+                        },
+                        name: vm_conf_file,
                         config_data: config_data,
-                        running: Path::new(&format!("{directory}/../qemu-{name}.pid")).exists(),
                         cpu_usage: 0,
                     }
                 })
