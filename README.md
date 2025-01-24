@@ -13,3 +13,4 @@ It is written in Rust using the [ratatui](https://ratatui.rs/) library
 - [ ] Connect to the console
 - [ ] Filter kernels/images filenames
 - [ ] Add smolBSD logo in the top right corner
+- [ ] Create binaries for multiple architectures (macos-amd64, macos-aarch64, linux-amd64, linux-aarch64)
