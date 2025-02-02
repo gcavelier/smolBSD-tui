@@ -5,8 +5,8 @@ smolBSD-tui is a TUI (Text User Interface) to handle [smolBSD](https://github.co
 It is written in Rust using the [ratatui](https://ratatui.rs/) library
 
 # Missing features
-- [ ] Start a VM
-- [ ] Stop a VM
+- [X] Start a VM
+- [X] Stop a VM
 - [ ] Create a new VM
 - [ ] Edit an exiting VM
 - [ ] Display the CPU usage

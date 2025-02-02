@@ -1,11 +1,21 @@
-use ratatui::crossterm::event::{self, Event, KeyCode};
+use std::time::Duration;
 
-use crate::app::State;
+use ratatui::{
+    crossterm::event::{self, Event, KeyCode},
+    widgets::ScrollbarState,
+};
+
+use crate::app::{StartStopState, State};
 
 pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
-    // TODO: use polling to update the (not yet implemented) timer
-    // https://ratatui.rs/tutorials/counter-async-app/async-event-stream/
-    let key = event::read()?;
+    let key: Event;
+
+    // We only wait 100ms for a key
+    if event::poll(Duration::from_millis(100))? {
+        key = event::read()?;
+    } else {
+        return Ok(());
+    }
 
     match app_state.current_screen {
         crate::app::CurrentScreen::List => match key {
@@ -32,7 +42,12 @@ pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
                             app_state.exit = true;
                         }
                         KeyCode::Char('s') => {
-                            app_state.current_screen = crate::app::CurrentScreen::StartStop
+                            app_state.current_screen =
+                                crate::app::CurrentScreen::StartStop(StartStopState {
+                                    err_str: None,
+                                    vertical_scroll_bar_pos: 0,
+                                    vertical_scroll_bar_state: ScrollbarState::default(),
+                                })
                         }
                         _ => {}
                     }
@@ -40,11 +55,26 @@ pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
             }
             _ => {}
         },
-        crate::app::CurrentScreen::StartStop => match key {
+        crate::app::CurrentScreen::StartStop(ref mut _start_stop_state) => match key {
             Event::Key(key_event) => {
                 if key_event.kind == event::KeyEventKind::Press {
                     match key_event.code {
-                        KeyCode::Esc => app_state.current_screen = crate::app::CurrentScreen::List,
+                        KeyCode::Esc | KeyCode::Enter => {
+                            app_state.current_screen = crate::app::CurrentScreen::List
+                        }
+                        // TODO: uncomment when max scroll position is handled
+                        // KeyCode::Down => {
+                        //     let pos = start_stop_state.vertical_scroll_bar_pos.saturating_add(1);
+                        //     start_stop_state.vertical_scroll_bar_pos = pos;
+                        //     start_stop_state.vertical_scroll_bar_state =
+                        //         start_stop_state.vertical_scroll_bar_state.position(pos);
+                        // }
+                        // KeyCode::Up => {
+                        //     let pos = start_stop_state.vertical_scroll_bar_pos.saturating_sub(1);
+                        //     start_stop_state.vertical_scroll_bar_pos = pos;
+                        //     start_stop_state.vertical_scroll_bar_state =
+                        //         start_stop_state.vertical_scroll_bar_state.position(pos);
+                        // }
                         _ => {}
                     }
                 }
