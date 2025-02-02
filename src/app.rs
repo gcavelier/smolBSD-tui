@@ -16,7 +16,9 @@ pub struct StartStopState {
 }
 #[derive(Clone, PartialEq)]
 pub enum CurrentScreen {
+    /// VMs List
     List,
+    /// This screen is only used to display an error when starting or stopping a VM
     StartStop(StartStopState), // This string is an optionnal error message
 }
 
@@ -67,6 +69,7 @@ impl Vm {
 
 pub struct State {
     base_dir: String,
+    pub ms_elapsed: u64,
     pub vms: Vec<Vm>,
     pub kernels: Option<Vec<DirEntry>>,
     pub images: Option<Vec<DirEntry>>,
@@ -80,6 +83,7 @@ impl State {
     pub fn new(base_dir: String) -> Result<Self, Box<dyn std::error::Error>> {
         let mut state = State {
             base_dir,
+            ms_elapsed: 0,
             vms: Vec::new(),
             kernels: None,
             images: None,

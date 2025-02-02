@@ -7,6 +7,7 @@ It is written in Rust using the [ratatui](https://ratatui.rs/) library
 # Missing features
 - [X] Start a VM
 - [X] Stop a VM
+- [X] Refresh vms/kernels/images every 2s
 - [ ] Create a new VM
 - [ ] Edit an exiting VM
 - [ ] Display the CPU usage
