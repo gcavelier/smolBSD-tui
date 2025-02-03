@@ -12,7 +12,7 @@ pub fn render(frame: &mut Frame, app_state: &mut State) {
     let [header_chunk, vms_list_chunk] =
         Layout::vertical([Constraint::Length(3), Constraint::Fill(1)]).areas(frame.area());
 
-    match &screen {
+    match screen {
         CurrentScreen::List => {
             render_header(frame, app_state, header_chunk);
             render_vms_list(frame, app_state, vms_list_chunk);

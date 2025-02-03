@@ -98,7 +98,8 @@ impl State {
     pub fn refresh(&mut self) {
         let kernels = files_in_directory(&format!("{}/kernels", &self.base_dir)).ok();
         let images = files_in_directory(&format!("{}/images", &self.base_dir)).ok();
-        let vms = get_vms(&self.base_dir).map_or(vec![], |vms| vms);
+        let mut vms = get_vms(&self.base_dir).map_or(vec![], |vms| vms);
+        vms.sort_by(|vm1, vm2| vm1.name.cmp(&vm2.name));
         self.kernels = kernels;
         self.images = images;
         self.vms = vms;
