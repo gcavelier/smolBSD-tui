@@ -19,7 +19,7 @@ pub enum CurrentScreen {
     /// VMs List
     List,
     /// This screen is only used to display an error when starting or stopping a VM
-    StartStop(StartStopState), // This string is an optionnal error message
+    StartStop(StartStopState),
 }
 
 #[derive(Debug)]
