@@ -56,6 +56,9 @@ pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
                                 vertical_scroll_bar_state: ScrollbarState::default(),
                             })
                         }
+                        KeyCode::Char('d') => {
+                            app_state.current_screen = Screen::DeleteConfirmation(false);
+                        }
                         _ => {}
                     }
                 }
@@ -80,6 +83,34 @@ pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
                         //     start_stop_state.vertical_scroll_bar_state =
                         //         start_stop_state.vertical_scroll_bar_state.position(pos);
                         // }
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        },
+        Screen::DeleteConfirmation(ok) => match key {
+            Event::Key(key_event) => {
+                if key_event.kind == event::KeyEventKind::Press {
+                    match key_event.code {
+                        KeyCode::Esc => {
+                            app_state.current_screen = Screen::List;
+                        }
+                        KeyCode::Left => {
+                            app_state.current_screen = Screen::DeleteConfirmation(true)
+                        }
+                        KeyCode::Right => {
+                            app_state.current_screen = Screen::DeleteConfirmation(false)
+                        }
+                        KeyCode::Tab => {
+                            app_state.current_screen = Screen::DeleteConfirmation(!ok);
+                        }
+                        KeyCode::Enter => {
+                            if ok {
+                                app_state.delete_vm()
+                            }
+                            app_state.current_screen = Screen::List;
+                        }
                         _ => {}
                     }
                 }

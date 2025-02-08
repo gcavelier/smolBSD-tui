@@ -20,6 +20,8 @@ pub enum Screen {
     List,
     /// This screen is only used to display an error when starting or stopping a VM
     StartStop(StartStopState),
+    /// Confirmation popup when deleting a VM. The boolean value indicates if "OK" has been selected
+    DeleteConfirmation(bool),
 }
 
 #[derive(Debug)]
@@ -158,6 +160,19 @@ impl State {
                 }
             }
         }
+    }
+
+    pub fn delete_vm(&mut self) {
+        let current_vm = match self.vms.get_mut(self.selected_vm_idx) {
+            Some(vm) => vm,
+            None => return, // This should never happened (unless self.selected_vm_idx is incorrect)
+        };
+        current_vm.pid.map(|_| current_vm.kill());
+        let file_to_delete = format!("{}/etc/{}.conf", self.base_dir, current_vm.name);
+        std::fs::remove_file(&file_to_delete)
+            .expect(&format!("Couldn't delete file {}", file_to_delete));
+        self.vms.remove(self.selected_vm_idx);
+        self.selected_vm_idx = self.selected_vm_idx.min(self.vms.len() - 1);
     }
 }
 

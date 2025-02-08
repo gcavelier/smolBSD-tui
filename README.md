@@ -8,7 +8,7 @@ It is written in Rust using the [ratatui](https://ratatui.rs/) library
 - [X] Start a VM
 - [X] Stop a VM
 - [X] Refresh vms/kernels/images every 2s
-- [ ] Delete a vm
+- [X] Delete a vm
 - [ ] Create a new VM
 - [ ] Edit an exiting VM
 - [ ] Display the CPU usage

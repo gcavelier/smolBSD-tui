@@ -26,6 +26,11 @@ pub fn render(frame: &mut Frame, app_state: &mut State) {
                 None => app_state.start_stop_vm(),
             }
         }
+        Screen::DeleteConfirmation(ok) => {
+            render_header(frame, app_state, header_chunk);
+            render_vms_list(frame, app_state, vms_list_chunk);
+            render_delete_confirmation_popup(frame, app_state, ok);
+        }
     }
     // TODO : toggable log block ?
 }
@@ -74,6 +79,7 @@ fn render_header(frame: &mut Frame, _app_state: &mut State, area: Rect) {
         Paragraph::new(Text::from(vec![
             Line::from(vec!["<Esc|q>".fg(Color::Magenta), " Quit".into()]),
             Line::from(vec!["    <s>".fg(Color::Magenta), " Start/Stop VM".into()]),
+            Line::from(vec!["    <d>".fg(Color::Magenta), " Delete VM".into()]),
         ])),
         tier2,
     );
@@ -198,6 +204,93 @@ fn render_start_stop_popup(frame: &mut Frame, app_state: &mut State) {
                 .bg(Color::Gray)
                 .centered(),
             button_chunk,
+        );
+    } else {
+        // app_state.selected_vm_idx is invalid, so something pretty bad happened!
+        // Going back to the main screen
+        app_state.current_screen = Screen::List;
+    }
+}
+
+fn render_delete_confirmation_popup(frame: &mut Frame, app_state: &mut State, ok: bool) {
+    if let Some(current_vm) = app_state.vms.get(app_state.selected_vm_idx) {
+        let top_block = Block::default()
+            .title(" Delete VM ")
+            .title_alignment(Alignment::Center)
+            .title_style(Style::new().white())
+            .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
+            .border_style(Style::new().white());
+        let area = centered_rect(50, 10, frame.area());
+        let [top_chunk, bottom_chunk] =
+            Layout::vertical([Constraint::Fill(1), Constraint::Length(4)]).areas(area);
+
+        frame.render_widget(
+            Paragraph::new(format!(
+                "Are you sure you want to delete VM '{}'",
+                current_vm.name
+            ))
+            .fg(Color::White)
+            .wrap(Wrap { trim: false })
+            .block(top_block.padding(Padding {
+                left: 1,
+                right: 1,
+                top: 1,
+                bottom: 1,
+            }))
+            .centered(),
+            top_chunk,
+        );
+
+        // Render "OK" and "Cancel" buttons
+        let bottom_block = Block::default()
+            .borders(Borders::BOTTOM | Borders::LEFT | Borders::RIGHT)
+            .border_style(Style::new().white());
+        frame.render_widget(bottom_block, bottom_chunk);
+        let [_, ok_button_chunk, _, cancel_button_chunk, _] = Layout::horizontal([
+            Constraint::Fill(1),
+            Constraint::Length(6),
+            Constraint::Length(5),
+            Constraint::Length(10),
+            Constraint::Fill(1),
+        ])
+        .areas(bottom_chunk);
+        let [_, ok_button_chunk, _] = Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Fill(1),
+            Constraint::Length(2),
+        ])
+        .areas(ok_button_chunk);
+        let [_, cancel_button_chunk, _] = Layout::vertical([
+            Constraint::Length(1),
+            Constraint::Fill(1),
+            Constraint::Length(2),
+        ])
+        .areas(cancel_button_chunk);
+        frame.render_widget(
+            Paragraph::new("OK")
+                .fg(match ok {
+                    true => Color::Black,
+                    false => Color::White,
+                })
+                .bg(match ok {
+                    true => Color::Gray,
+                    false => Color::Black,
+                })
+                .centered(),
+            ok_button_chunk,
+        );
+        frame.render_widget(
+            Paragraph::new("Cancel")
+                .fg(match ok {
+                    true => Color::White,
+                    false => Color::Black,
+                })
+                .bg(match ok {
+                    true => Color::Black,
+                    false => Color::Gray,
+                })
+                .centered(),
+            cancel_button_chunk,
         );
     } else {
         // app_state.selected_vm_idx is invalid, so something pretty bad happened!
