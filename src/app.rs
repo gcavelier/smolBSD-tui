@@ -15,7 +15,7 @@ pub struct StartStopState {
     pub vertical_scroll_bar_state: ScrollbarState,
 }
 #[derive(Clone, PartialEq)]
-pub enum CurrentScreen {
+pub enum Screen {
     /// VMs List
     List,
     /// This screen is only used to display an error when starting or stopping a VM
@@ -75,7 +75,7 @@ pub struct State {
     pub images: Option<Vec<DirEntry>>,
     pub table_state: TableState,
     pub selected_vm_idx: usize, // idx in table_state
-    pub current_screen: CurrentScreen,
+    pub current_screen: Screen,
     pub exit: bool,
 }
 
@@ -89,7 +89,7 @@ impl State {
             images: None,
             table_state: TableState::default(),
             selected_vm_idx: 0,
-            current_screen: CurrentScreen::List,
+            current_screen: Screen::List,
             exit: false,
         };
         state.refresh();
@@ -111,11 +111,11 @@ impl State {
                     match current_vm.kill() {
                         Ok(_) => {
                             current_vm.pid = None;
-                            self.current_screen = CurrentScreen::List;
+                            self.current_screen = Screen::List;
                             ()
                         }
                         Err(err) => {
-                            self.current_screen = CurrentScreen::StartStop(StartStopState {
+                            self.current_screen = Screen::StartStop(StartStopState {
                                 err_str: Some(err),
                                 vertical_scroll_bar_state: ScrollbarState::default(),
                                 vertical_scroll_bar_pos: 0,
@@ -138,11 +138,11 @@ impl State {
                                 // Updating the VM info
                                 current_vm.update_pid(&self.base_dir);
                                 // Everything is fine, going back to the main screen
-                                self.current_screen = CurrentScreen::List;
+                                self.current_screen = Screen::List;
                             } else {
                                 let err_str = String::from_utf8(res.stderr).unwrap();
                                 let err_str_lines = err_str.lines().count();
-                                self.current_screen = CurrentScreen::StartStop(StartStopState {
+                                self.current_screen = Screen::StartStop(StartStopState {
                                     err_str: Some(err_str),
                                     vertical_scroll_bar_state: ScrollbarState::default()
                                         .content_length(err_str_lines),

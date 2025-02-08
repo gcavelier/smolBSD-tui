@@ -8,7 +8,7 @@ use ratatui::{
 const POLL_INTERVAL_MS: u64 = 100;
 const LIST_REFRESH_INTERVAL_SEC: u64 = 2;
 
-use crate::app::{StartStopState, State};
+use crate::app::{Screen, StartStopState, State};
 
 pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
     let key: Event;
@@ -26,7 +26,7 @@ pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
     }
 
     match app_state.current_screen {
-        crate::app::CurrentScreen::List => match key {
+        Screen::List => match key {
             Event::Key(key_event) => {
                 if key_event.kind == event::KeyEventKind::Press {
                     match key_event.code {
@@ -50,12 +50,11 @@ pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
                             app_state.exit = true;
                         }
                         KeyCode::Char('s') => {
-                            app_state.current_screen =
-                                crate::app::CurrentScreen::StartStop(StartStopState {
-                                    err_str: None,
-                                    vertical_scroll_bar_pos: 0,
-                                    vertical_scroll_bar_state: ScrollbarState::default(),
-                                })
+                            app_state.current_screen = Screen::StartStop(StartStopState {
+                                err_str: None,
+                                vertical_scroll_bar_pos: 0,
+                                vertical_scroll_bar_state: ScrollbarState::default(),
+                            })
                         }
                         _ => {}
                     }
@@ -63,13 +62,11 @@ pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
             }
             _ => {}
         },
-        crate::app::CurrentScreen::StartStop(ref mut _start_stop_state) => match key {
+        Screen::StartStop(ref mut _start_stop_state) => match key {
             Event::Key(key_event) => {
                 if key_event.kind == event::KeyEventKind::Press {
                     match key_event.code {
-                        KeyCode::Esc | KeyCode::Enter => {
-                            app_state.current_screen = crate::app::CurrentScreen::List
-                        }
+                        KeyCode::Esc | KeyCode::Enter => app_state.current_screen = Screen::List,
                         // TODO: uncomment when max scroll position is handled
                         // KeyCode::Down => {
                         //     let pos = start_stop_state.vertical_scroll_bar_pos.saturating_add(1);

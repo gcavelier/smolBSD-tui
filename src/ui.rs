@@ -1,4 +1,4 @@
-use crate::app::{CurrentScreen, State};
+use crate::app::{Screen, State};
 use ratatui::{
     prelude::*,
     widgets::{Block, Borders, Padding, Paragraph, Row, Table, Wrap},
@@ -13,11 +13,11 @@ pub fn render(frame: &mut Frame, app_state: &mut State) {
         Layout::vertical([Constraint::Length(3), Constraint::Fill(1)]).areas(frame.area());
 
     match screen {
-        CurrentScreen::List => {
+        Screen::List => {
             render_header(frame, app_state, header_chunk);
             render_vms_list(frame, app_state, vms_list_chunk);
         }
-        CurrentScreen::StartStop(start_stop_state) => {
+        Screen::StartStop(start_stop_state) => {
             render_header(frame, app_state, header_chunk);
             render_vms_list(frame, app_state, vms_list_chunk);
 
@@ -127,11 +127,11 @@ fn render_start_stop_popup(frame: &mut Frame, app_state: &mut State) {
     // We first check if we have an error to display
     // If not, we don't do anything
     let (err_str, ref mut start_stop_state) = match app_state.current_screen.clone() {
-        CurrentScreen::List => return,
-        CurrentScreen::StartStop(start_stop_state) => match &start_stop_state.err_str {
+        Screen::StartStop(start_stop_state) => match &start_stop_state.err_str {
             None => return,
             Some(err) => (err.replace('\t', " "), start_stop_state), // TODO: calculate tab length
         },
+        _ => return,
     };
 
     if let Some(current_vm) = app_state.vms.get(app_state.selected_vm_idx) {
@@ -202,6 +202,6 @@ fn render_start_stop_popup(frame: &mut Frame, app_state: &mut State) {
     } else {
         // app_state.selected_vm_idx is invalid, so something pretty bad happened!
         // Going back to the main screen
-        app_state.current_screen = CurrentScreen::List;
+        app_state.current_screen = Screen::List;
     }
 }
