@@ -136,13 +136,17 @@ impl State {
                         .output()
                     {
                         Ok(res) => {
-                            if res.stderr.is_empty() {
+                            if res.stdout.is_empty() && res.stderr.is_empty() {
                                 // Updating the VM info
                                 current_vm.update_pid(&self.base_dir);
                                 // Everything is fine, going back to the main screen
                                 self.current_screen = Screen::List;
                             } else {
-                                let err_str = String::from_utf8(res.stderr).unwrap();
+                                let err_str = format!(
+                                    "startnb.sh failed!\n\n{}{}",
+                                    String::from_utf8(res.stdout).unwrap(),
+                                    String::from_utf8(res.stderr).unwrap()
+                                );
                                 let err_str_lines = err_str.lines().count();
                                 self.current_screen = Screen::StartStop(StartStopState {
                                     err_str: Some(err_str),
@@ -153,7 +157,14 @@ impl State {
                             }
                         }
                         Err(err) => {
-                            println!("Err: {err}");
+                            let err_str = format!("startnb.sh failed!\n\n{err}");
+                            let err_str_lines = err_str.lines().count();
+                            self.current_screen = Screen::StartStop(StartStopState {
+                                err_str: Some(err_str),
+                                vertical_scroll_bar_state: ScrollbarState::default()
+                                    .content_length(err_str_lines),
+                                vertical_scroll_bar_pos: 0,
+                            })
                         }
                     }
                     ()
