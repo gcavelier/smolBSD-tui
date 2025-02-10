@@ -1,7 +1,7 @@
 use crate::app::{Screen, State};
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, Padding, Paragraph, Row, Table, Wrap},
+    widgets::{Block, Borders, Clear, Padding, Paragraph, Row, Table, Wrap},
 };
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -160,7 +160,10 @@ fn render_start_stop_popup(frame: &mut Frame, app_state: &mut State) {
             .title_style(Style::new().red())
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
             .border_style(POPUP_BORDER_COLOR);
+
         let area = centered_rect(60, 60, frame.area());
+        frame.render_widget(Clear, area);
+
         let [top_chunk, bottom_chunk] =
             Layout::vertical([Constraint::Fill(1), Constraint::Length(4)]).areas(area);
 
@@ -226,7 +229,10 @@ fn render_delete_confirmation_popup(frame: &mut Frame, app_state: &mut State, ok
             .title_style(Style::new().white())
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
             .border_style(POPUP_BORDER_COLOR);
+
         let area = centered_rect(50, 15, frame.area());
+        frame.render_widget(Clear, area);
+
         let [top_chunk, bottom_chunk] =
             Layout::vertical([Constraint::Fill(1), Constraint::Length(4)]).areas(area);
 

@@ -143,7 +143,7 @@ impl State {
                                 self.current_screen = Screen::List;
                             } else {
                                 let err_str = format!(
-                                    "startnb.sh failed!\n\n{}{}",
+                                    "startnb.sh failed!\n{}{}",
                                     String::from_utf8(res.stdout).unwrap(),
                                     String::from_utf8(res.stderr).unwrap()
                                 );
@@ -157,7 +157,7 @@ impl State {
                             }
                         }
                         Err(err) => {
-                            let err_str = format!("startnb.sh failed!\n\n{err}");
+                            let err_str = format!("startnb.sh failed!\n{err}");
                             let err_str_lines = err_str.lines().count();
                             self.current_screen = Screen::StartStop(StartStopState {
                                 err_str: Some(err_str),
