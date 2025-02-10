@@ -5,6 +5,15 @@ use ratatui::{
 };
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+const INFO_COLOR: Color = Color::Indexed(208);
+const SELECTED_BUTTON_FG_COLOR: Color = Color::Black;
+const SELECTED_BUTTON_BG_COLOR: Color = Color::Gray;
+const UNSELECTED_BUTTON_FG_COLOR: Color = Color::Gray;
+const UNSELECTED_BUTTON_BG_COLOR: Color = Color::Black;
+const POPUP_BORDER_COLOR: Color = Color::Indexed(74);
+const RUNNING_VM_FG: Color = Color::Indexed(74);
+const NON_RUNNING_VM_FG: Color = Color::Indexed(202);
+const ACTION_COLOR: Color = Color::Magenta;
 
 pub fn render(frame: &mut Frame, app_state: &mut State) {
     let screen = app_state.current_screen.clone();
@@ -68,18 +77,15 @@ fn render_header(frame: &mut Frame, _app_state: &mut State, area: Rect) {
     ])
     .areas(area);
     frame.render_widget(
-        Paragraph::new(Line::from(vec![
-            "Version: ".fg(Color::Indexed(208)),
-            VERSION.into(),
-        ]))
-        .block(Block::new().padding(Padding::left(1))),
+        Paragraph::new(Line::from(vec!["Version: ".fg(INFO_COLOR), VERSION.into()]))
+            .block(Block::new().padding(Padding::left(1))),
         tier1,
     );
     frame.render_widget(
         Paragraph::new(Text::from(vec![
-            Line::from(vec!["<Esc|q>".fg(Color::Magenta), " Quit".into()]),
-            Line::from(vec!["    <s>".fg(Color::Magenta), " Start/Stop VM".into()]),
-            Line::from(vec!["    <d>".fg(Color::Magenta), " Delete VM".into()]),
+            Line::from(vec!["<Esc|q>".fg(ACTION_COLOR), " Quit".into()]),
+            Line::from(vec!["    <s>".fg(ACTION_COLOR), " Start/Stop".into()]),
+            Line::from(vec!["    <d>".fg(ACTION_COLOR), " Delete".into()]),
         ])),
         tier2,
     );
@@ -91,8 +97,8 @@ fn render_vms_list(frame: &mut Frame, app_state: &mut State, area: Rect) {
         .iter()
         .map(|vm| {
             let (running_str, running_color) = match vm.pid {
-                Some(_) => ("  Yes".to_owned(), Color::Indexed(74)),
-                None => ("   No".to_owned(), Color::Indexed(202)),
+                Some(_) => ("  Yes".to_owned(), RUNNING_VM_FG),
+                None => ("   No".to_owned(), NON_RUNNING_VM_FG),
             };
             Row::new(vec![vm.name.clone(), running_str]).style(Style::new().fg(running_color))
         })
@@ -100,7 +106,7 @@ fn render_vms_list(frame: &mut Frame, app_state: &mut State, area: Rect) {
     let widths = [Constraint::Min(5), Constraint::Length(10)];
     let table = Table::new(rows, widths)
         .column_spacing(1)
-        .fg(Color::Indexed(74))
+        .fg(RUNNING_VM_FG)
         .header(Row::new(vec!["NAME", "RUNNING"]).style(Style::new().white()))
         .block(
             Block::default()
@@ -143,7 +149,7 @@ fn render_start_stop_popup(frame: &mut Frame, app_state: &mut State) {
     if let Some(current_vm) = app_state.vms.get(app_state.selected_vm_idx) {
         let top_block = Block::default()
             .title(format!(
-                " Error {} '{}' VM ",
+                " ❌ Error {} '{}' VM ❌ ",
                 match current_vm.pid {
                     Some(_) => "stopping", // The VM is running, we want to stop it
                     None => "starting",    // The VM is *not* running, we want to start it
@@ -153,7 +159,7 @@ fn render_start_stop_popup(frame: &mut Frame, app_state: &mut State) {
             .title_alignment(Alignment::Center)
             .title_style(Style::new().red())
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
-            .border_style(Style::new().white());
+            .border_style(POPUP_BORDER_COLOR);
         let area = centered_rect(60, 60, frame.area());
         let [top_chunk, bottom_chunk] =
             Layout::vertical([Constraint::Fill(1), Constraint::Length(4)]).areas(area);
@@ -182,7 +188,7 @@ fn render_start_stop_popup(frame: &mut Frame, app_state: &mut State) {
 
         let bottom_block = Block::default()
             .borders(Borders::BOTTOM | Borders::LEFT | Borders::RIGHT)
-            .border_style(Style::new().white());
+            .border_style(POPUP_BORDER_COLOR);
         frame.render_widget(bottom_block, bottom_chunk);
 
         let [_, button_chunk, _] = Layout::horizontal([
@@ -200,8 +206,8 @@ fn render_start_stop_popup(frame: &mut Frame, app_state: &mut State) {
 
         frame.render_widget(
             Paragraph::new("OK")
-                .fg(Color::Black)
-                .bg(Color::Gray)
+                .fg(SELECTED_BUTTON_FG_COLOR)
+                .bg(SELECTED_BUTTON_BG_COLOR)
                 .centered(),
             button_chunk,
         );
@@ -215,12 +221,12 @@ fn render_start_stop_popup(frame: &mut Frame, app_state: &mut State) {
 fn render_delete_confirmation_popup(frame: &mut Frame, app_state: &mut State, ok: bool) {
     if let Some(current_vm) = app_state.vms.get(app_state.selected_vm_idx) {
         let top_block = Block::default()
-            .title(" Delete VM ")
+            .title(" ❗ Delete VM ❗ ")
             .title_alignment(Alignment::Center)
             .title_style(Style::new().white())
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
-            .border_style(Style::new().white());
-        let area = centered_rect(50, 10, frame.area());
+            .border_style(POPUP_BORDER_COLOR);
+        let area = centered_rect(50, 15, frame.area());
         let [top_chunk, bottom_chunk] =
             Layout::vertical([Constraint::Fill(1), Constraint::Length(4)]).areas(area);
 
@@ -244,7 +250,7 @@ fn render_delete_confirmation_popup(frame: &mut Frame, app_state: &mut State, ok
         // Render "OK" and "Cancel" buttons
         let bottom_block = Block::default()
             .borders(Borders::BOTTOM | Borders::LEFT | Borders::RIGHT)
-            .border_style(Style::new().white());
+            .border_style(POPUP_BORDER_COLOR);
         frame.render_widget(bottom_block, bottom_chunk);
         let [_, ok_button_chunk, _, cancel_button_chunk, _] = Layout::horizontal([
             Constraint::Fill(1),
@@ -269,25 +275,25 @@ fn render_delete_confirmation_popup(frame: &mut Frame, app_state: &mut State, ok
         frame.render_widget(
             Paragraph::new("OK")
                 .fg(match ok {
-                    true => Color::Black,
-                    false => Color::White,
+                    true => SELECTED_BUTTON_FG_COLOR,
+                    false => UNSELECTED_BUTTON_FG_COLOR,
                 })
                 .bg(match ok {
-                    true => Color::Gray,
-                    false => Color::Black,
+                    true => SELECTED_BUTTON_BG_COLOR,
+                    false => UNSELECTED_BUTTON_BG_COLOR,
                 })
                 .centered(),
             ok_button_chunk,
         );
         frame.render_widget(
             Paragraph::new("Cancel")
-                .fg(match ok {
-                    true => Color::White,
-                    false => Color::Black,
+                .fg(match !ok {
+                    true => SELECTED_BUTTON_FG_COLOR,
+                    false => UNSELECTED_BUTTON_FG_COLOR,
                 })
-                .bg(match ok {
-                    true => Color::Black,
-                    false => Color::Gray,
+                .bg(match !ok {
+                    true => SELECTED_BUTTON_BG_COLOR,
+                    false => UNSELECTED_BUTTON_BG_COLOR,
                 })
                 .centered(),
             cancel_button_chunk,
