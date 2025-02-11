@@ -6,3 +6,7 @@ edition = "2021"
 [dependencies]
 libc = { version = "0.2", default-features = false }
 ratatui = { version = "0.30.0-alpha.1", default-features = false, features = ["crossterm"] }
+
+[profile.release]
+strip = true	    # Automatically strip symbols from the binary
+lto = "fat"         # Enable link time optimization
