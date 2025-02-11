@@ -1,7 +1,7 @@
-use crate::app::{Screen, State};
+use crate::app::{Screen, StartStopState, State};
 use ratatui::{
     prelude::*,
-    widgets::{Block, Borders, Clear, Padding, Paragraph, Row, Table, Wrap},
+    widgets::{Block, Borders, Clear, Padding, Paragraph, Row, ScrollbarState, Table, Wrap},
 };
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -32,7 +32,16 @@ pub fn render(frame: &mut Frame, app_state: &mut State) {
 
             match start_stop_state.err_str {
                 Some(_) => render_start_stop_popup(frame, app_state),
-                None => app_state.start_stop_vm(),
+                None => match app_state.start_stop_vm() {
+                    Ok(_) => app_state.current_screen = Screen::List, // Everything is fine, going back to the main screen
+                    Err(err) => {
+                        app_state.current_screen = Screen::StartStop(StartStopState {
+                            err_str: Some(err),
+                            vertical_scroll_bar_pos: 0,
+                            vertical_scroll_bar_state: ScrollbarState::default(),
+                        })
+                    }
+                },
             }
         }
         Screen::DeleteConfirmation(ok) => {

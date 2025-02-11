@@ -106,24 +106,11 @@ impl State {
         self.images = images;
         self.vms = vms;
     }
-    pub fn start_stop_vm(&mut self) {
+    pub fn start_stop_vm(&mut self) -> Result<(), String> {
         if let Some(current_vm) = self.vms.get_mut(self.selected_vm_idx) {
             match current_vm.pid {
                 Some(_) => {
-                    match current_vm.kill() {
-                        Ok(_) => {
-                            current_vm.pid = None;
-                            self.current_screen = Screen::List;
-                            ()
-                        }
-                        Err(err) => {
-                            self.current_screen = Screen::StartStop(StartStopState {
-                                err_str: Some(err),
-                                vertical_scroll_bar_state: ScrollbarState::default(),
-                                vertical_scroll_bar_pos: 0,
-                            })
-                        }
-                    };
+                    return current_vm.kill();
                 }
                 None => {
                     match std::process::Command::new(
@@ -138,38 +125,24 @@ impl State {
                             if res.stdout.is_empty() && res.stderr.is_empty() {
                                 // Updating the VM info
                                 current_vm.update_pid(&self.base_dir);
-                                // Everything is fine, going back to the main screen
-                                self.current_screen = Screen::List;
                             } else {
                                 let err_str = format!(
                                     "startnb.sh failed!\n{}{}",
                                     String::from_utf8(res.stdout).unwrap(),
                                     String::from_utf8(res.stderr).unwrap()
                                 );
-                                let err_str_lines = err_str.lines().count();
-                                self.current_screen = Screen::StartStop(StartStopState {
-                                    err_str: Some(err_str),
-                                    vertical_scroll_bar_state: ScrollbarState::default()
-                                        .content_length(err_str_lines),
-                                    vertical_scroll_bar_pos: 0,
-                                })
+                                return Err(err_str);
                             }
                         }
                         Err(err) => {
-                            let err_str = format!("startnb.sh failed!\n{err}");
-                            let err_str_lines = err_str.lines().count();
-                            self.current_screen = Screen::StartStop(StartStopState {
-                                err_str: Some(err_str),
-                                vertical_scroll_bar_state: ScrollbarState::default()
-                                    .content_length(err_str_lines),
-                                vertical_scroll_bar_pos: 0,
-                            })
+                            let err_str = format!("std::process::Command::new() failed!\n{err}");
+                            return Err(err_str);
                         }
                     }
-                    ()
                 }
             }
         }
+        Ok(())
     }
 
     pub fn delete_vm(&mut self) {
