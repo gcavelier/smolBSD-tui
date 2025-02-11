@@ -9,6 +9,7 @@ It is written in Rust using the [ratatui](https://ratatui.rs/) library
 - [X] Stop a VM
 - [X] Refresh vms/kernels/images every 2s
 - [X] Delete a vm
+- [ ] Popups size should be calculated from their content's size
 - [ ] Create a new VM
 - [ ] Edit an exiting VM
 - [ ] Display the CPU usage
