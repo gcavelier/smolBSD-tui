@@ -126,14 +126,13 @@ impl State {
                     };
                 }
                 None => {
-                    match std::process::Command::new(format!("{}/startnb.sh", self.base_dir))
-                        .args([
-                            "-f",
-                            &format!("{}/etc/{}.conf", self.base_dir, current_vm.name),
-                            "-d",
-                        ])
-                        .current_dir(&self.base_dir)
-                        .output()
+                    match std::process::Command::new(
+                        std::fs::canonicalize(format!("{}/startnb.sh", self.base_dir))
+                            .map_err(|err| format!("std::fs::canonicalize() failed: {err}"))?,
+                    )
+                    .args(["-f", &format!("etc/{}.conf", current_vm.name), "-d"])
+                    .current_dir(&self.base_dir)
+                    .output()
                     {
                         Ok(res) => {
                             if res.stdout.is_empty() && res.stderr.is_empty() {
