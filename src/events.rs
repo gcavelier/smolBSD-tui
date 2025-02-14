@@ -62,8 +62,8 @@ pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-        Screen::StartStop(ref mut _start_stop_state) => match key {
-            Event::Key(key_event) => {
+        Screen::StartStop(ref mut _start_stop_state) => {
+            if let Event::Key(key_event) = key {
                 if key_event.kind == event::KeyEventKind::Press {
                     match key_event.code {
                         KeyCode::Esc | KeyCode::Enter => app_state.current_screen = Screen::List,
@@ -84,8 +84,7 @@ pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-            _ => {}
-        },
+        }
         Screen::DeleteConfirmation(ok) => match key {
             Event::Key(key_event) => {
                 if key_event.kind == event::KeyEventKind::Press {
