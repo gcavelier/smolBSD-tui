@@ -192,16 +192,15 @@ fn get_vms(base_directory: &str) -> Result<Vec<Vm>, Box<dyn std::error::Error>> 
                         })
                         .collect();
                     // If the hashmap doesn't contain the 'vm' key, we discard it
-                    match hashmap.get("vm") {
-                        Some(_) => Some((
+                    hashmap.contains_key("vm").then(|| {
+                        (
                             hashmap,
                             vm_conf_file
                                 .file_name()
                                 .into_string()
                                 .unwrap_or("".to_string()),
-                        )),
-                        None => None,
-                    }
+                        )
+                    })
                 })
                 .map(|(config_data, vm_conf_file)| {
                     let vm_conf_file = vm_conf_file.strip_suffix(".conf").unwrap(); // We filtered the files ending with '.conf', so this unwrap() always succeed
