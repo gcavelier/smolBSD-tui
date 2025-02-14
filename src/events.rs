@@ -11,11 +11,9 @@ const LIST_REFRESH_INTERVAL_SEC: u64 = 2;
 use crate::app::{Screen, StartStopState, State};
 
 pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
-    let key: Event;
-
     // We wait POLL_INTERVAL_MS for a key
-    if event::poll(Duration::from_millis(POLL_INTERVAL_MS))? {
-        key = event::read()?;
+    let key = if event::poll(Duration::from_millis(POLL_INTERVAL_MS))? {
+        event::read()?
     } else {
         let (ms_elapsed, _) = app_state.ms_elapsed.overflowing_add(POLL_INTERVAL_MS);
         app_state.ms_elapsed = ms_elapsed;
@@ -23,7 +21,7 @@ pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
             app_state.refresh();
         }
         return Ok(());
-    }
+    };
 
     match app_state.current_screen {
         Screen::List => match key {
