@@ -85,8 +85,8 @@ pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-        Screen::DeleteConfirmation(ok) => match key {
-            Event::Key(key_event) => {
+        Screen::DeleteConfirmation(ok) => {
+            if let Event::Key(key_event) = key {
                 if key_event.kind == event::KeyEventKind::Press {
                     match key_event.code {
                         KeyCode::Esc => {
@@ -111,8 +111,7 @@ pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-            _ => {}
-        },
+        }
     }
 
     Ok(())
