@@ -52,18 +52,14 @@ fn run(
     mut terminal: DefaultTerminal,
     mut app_state: app::State,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    loop {
-        match app_state.exit {
-            false => {
-                terminal.draw(|frame| ui::render(frame, &mut app_state))?;
-                if events::handle(&mut app_state).is_err() {
-                    // This waits for the next event
-                    // TODO: better error handling ?
-                    break;
-                }
-            }
-            true => break,
+    while !app_state.exit {
+        terminal.draw(|frame| ui::render(frame, &mut app_state))?;
+        if events::handle(&mut app_state).is_err() {
+            // This waits for the next event
+            // TODO: better error handling ?
+            break;
         }
     }
+
     Ok(())
 }
