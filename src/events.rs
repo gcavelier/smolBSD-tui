@@ -24,8 +24,8 @@ pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
     };
 
     match app_state.current_screen {
-        Screen::List => match key {
-            Event::Key(key_event) => {
+        Screen::List => {
+            if let Event::Key(key_event) = key {
                 if key_event.kind == event::KeyEventKind::Press {
                     match key_event.code {
                         KeyCode::Down => {
@@ -61,8 +61,7 @@ pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-            _ => {}
-        },
+        }
         Screen::StartStop(ref mut _start_stop_state) => match key {
             Event::Key(key_event) => {
                 if key_event.kind == event::KeyEventKind::Press {
