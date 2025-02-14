@@ -153,7 +153,7 @@ impl State {
         current_vm.pid.map(|_| current_vm.kill());
         let file_to_delete = format!("{}/etc/{}.conf", self.base_dir, current_vm.name);
         std::fs::remove_file(&file_to_delete)
-            .expect(&format!("Couldn't delete file {}", file_to_delete));
+            .unwrap_or_else(|_| panic!("Couldn't delete file {}", file_to_delete));
         self.vms.remove(self.selected_vm_idx);
         self.selected_vm_idx = self.selected_vm_idx.min(self.vms.len() - 1);
     }
