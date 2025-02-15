@@ -14,6 +14,7 @@ const POPUP_BORDER_COLOR: Color = Color::Indexed(74);
 const RUNNING_VM_FG: Color = Color::Indexed(74);
 const NON_RUNNING_VM_FG: Color = Color::Indexed(202);
 const ACTION_COLOR: Color = Color::Magenta;
+const DEFAULT_SPACING_PADDING: u16 = 1;
 
 pub fn render(frame: &mut Frame, app_state: &mut State) {
     let screen = app_state.current_screen.clone();
@@ -114,7 +115,7 @@ fn render_vms_list(frame: &mut Frame, app_state: &mut State, area: Rect) {
         .collect();
     let widths = [Constraint::Min(5), Constraint::Length(10)];
     let table = Table::new(rows, widths)
-        .column_spacing(1)
+        .column_spacing(DEFAULT_SPACING_PADDING)
         .fg(RUNNING_VM_FG)
         .header(Row::new(vec!["NAME", "RUNNING"]).style(Style::new().white()))
         .block(
@@ -129,8 +130,8 @@ fn render_vms_list(frame: &mut Frame, app_state: &mut State, area: Rect) {
                     Span::styled("] ", Style::new()),
                 ]))
                 .padding(Padding {
-                    left: 1,
-                    right: 1,
+                    left: DEFAULT_SPACING_PADDING,
+                    right: DEFAULT_SPACING_PADDING,
                     top: 0,
                     bottom: 0,
                 })
