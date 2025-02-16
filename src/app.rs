@@ -207,7 +207,7 @@ fn get_vms(base_directory: &str) -> Result<Vec<Vm>, Box<dyn std::error::Error>> 
                     let mut vm = Vm {
                         pid: None,
                         name: vm_conf_file.to_string(),
-                        config_data: config_data,
+                        config_data,
                         cpu_usage: 0,
                     };
                     vm.update_pid(base_directory);
