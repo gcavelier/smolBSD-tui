@@ -1,5 +1,6 @@
 use crate::app::{Screen, StartStopState, State};
 use ratatui::{
+    layout::Flex,
     prelude::*,
     widgets::{Block, Borders, Clear, Padding, Paragraph, Row, ScrollbarState, Table, Wrap},
 };
@@ -52,31 +53,6 @@ pub fn render(frame: &mut Frame, app_state: &mut State) {
         }
     }
     // TODO : toggable log block ?
-}
-
-/// helper function to create a centered rect using up certain percentage of the available rect `r`
-/// Code from https://ratatui.rs/tutorials/json-editor/ui/
-/// TODO: rewrite using https://docs.rs/ratatui/latest/src/demo2/destroy.rs.html#136
-fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
-    // Cut the given rectangle into three vertical pieces
-    let popup_layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage((100 - percent_y) / 2),
-            Constraint::Percentage(percent_y),
-            Constraint::Percentage((100 - percent_y) / 2),
-        ])
-        .split(r);
-
-    // Then cut the middle vertical piece into three width-wise pieces
-    Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage((100 - percent_x) / 2),
-            Constraint::Percentage(percent_x),
-            Constraint::Percentage((100 - percent_x) / 2),
-        ])
-        .split(popup_layout[1])[1] // Return the middle chunk
 }
 
 fn render_header(frame: &mut Frame, _app_state: &mut State, area: Rect) {
@@ -157,21 +133,33 @@ fn render_start_stop_popup(frame: &mut Frame, app_state: &mut State) {
     };
 
     if let Some(current_vm) = app_state.vms.get(app_state.selected_vm_idx) {
+        let title = format!(
+            " ❌ Error {} '{}' VM ❌ ",
+            match current_vm.pid {
+                Some(_) => "stopping", // The VM is running, we want to stop it
+                None => "starting",    // The VM is *not* running, we want to start it
+            },
+            current_vm.name
+        );
+
+        let area = get_centered_area_fit_to_content(
+            frame,
+            err_str.lines().count() as u16 + 4,
+            (err_str
+                .lines()
+                .map(|line| line.len())
+                .max()
+                .unwrap_or_default() as u16)
+                .max(title.len() as u16),
+        );
+
         let top_block = Block::default()
-            .title(format!(
-                " ❌ Error {} '{}' VM ❌ ",
-                match current_vm.pid {
-                    Some(_) => "stopping", // The VM is running, we want to stop it
-                    None => "starting",    // The VM is *not* running, we want to start it
-                },
-                current_vm.name
-            ))
+            .title(title)
             .title_alignment(Alignment::Center)
             .title_style(Style::new().red())
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
             .border_style(POPUP_BORDER_COLOR);
 
-        let area = centered_rect(60, 60, frame.area());
         frame.render_widget(Clear, area);
 
         let [top_chunk, bottom_chunk] =
@@ -233,33 +221,34 @@ fn render_start_stop_popup(frame: &mut Frame, app_state: &mut State) {
 
 fn render_delete_confirmation_popup(frame: &mut Frame, app_state: &mut State, ok: bool) {
     if let Some(current_vm) = app_state.vms.get(app_state.selected_vm_idx) {
+        let title = " ❗ Delete VM ❗ ";
+        let msg = format!("Are you sure you want to delete VM '{}'", current_vm.name);
+
+        let area = get_centered_area_fit_to_content(frame, 1 + 3, msg.len() as u16);
+
         let top_block = Block::default()
-            .title(" ❗ Delete VM ❗ ")
+            .title(title)
             .title_alignment(Alignment::Center)
             .title_style(Style::new().white())
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
             .border_style(POPUP_BORDER_COLOR);
 
-        let area = centered_rect(50, 15, frame.area());
         frame.render_widget(Clear, area);
 
         let [top_chunk, bottom_chunk] =
             Layout::vertical([Constraint::Fill(1), Constraint::Length(4)]).areas(area);
 
         frame.render_widget(
-            Paragraph::new(format!(
-                "Are you sure you want to delete VM '{}'",
-                current_vm.name
-            ))
-            .fg(Color::White)
-            .wrap(Wrap { trim: false })
-            .block(top_block.padding(Padding {
-                left: 1,
-                right: 1,
-                top: 1,
-                bottom: 1,
-            }))
-            .centered(),
+            Paragraph::new(msg)
+                .fg(Color::White)
+                .wrap(Wrap { trim: false })
+                .block(top_block.padding(Padding {
+                    left: DEFAULT_SPACING_PADDING,
+                    right: DEFAULT_SPACING_PADDING,
+                    top: DEFAULT_SPACING_PADDING,
+                    bottom: DEFAULT_SPACING_PADDING,
+                }))
+                .centered(),
             top_chunk,
         );
 
@@ -319,4 +308,28 @@ fn render_delete_confirmation_popup(frame: &mut Frame, app_state: &mut State, ok
         // Going back to the main screen
         app_state.current_screen = Screen::List;
     }
+}
+
+fn get_centered_area_fit_to_content(
+    frame: &mut Frame,
+    content_height: u16,
+    content_width: u16,
+) -> Rect {
+    // TODO: handle case where popup_height > max_y and popup_width > max_x
+    // => return a ScrollBarState ?
+
+    // Max popup size : 80% of the frame size
+    let max_y = (frame.area().height as f64 * 0.8).trunc() as u16;
+    let max_x = (frame.area().width as f64 * 0.8).trunc() as u16;
+
+    // Adding DEFAULT_SPACING_PADDING * 4 to account for the spacing/padding, the title and the bottom border
+    let popup_height = content_height + DEFAULT_SPACING_PADDING * 4;
+    // Adding DEFAULT_SPACING_PADDING * 4 to account for the spacing/padding and the left and right borders
+    let popup_width = content_width + DEFAULT_SPACING_PADDING * 4;
+
+    let horizontal = Layout::horizontal([popup_width]).flex(Flex::Center);
+    let vertical = Layout::vertical([popup_height]).flex(Flex::Center);
+    let [area] = vertical.areas(frame.area());
+    let [area] = horizontal.areas(area);
+    area
 }
