@@ -7,6 +7,7 @@ It is written in Rust using the [ratatui](https://ratatui.rs/) library
 # Features
 - [X] Start a VM
 - [X] Stop a VM
+- [ ] Add a popup when the VM is being started/stopped
 - [X] Refresh vms/kernels/images every 2s
 - [X] Delete a vm
 - [X] Popups size should be calculated from their content's size
