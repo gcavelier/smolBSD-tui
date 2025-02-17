@@ -33,7 +33,7 @@ pub fn render(frame: &mut Frame, app_state: &mut State) {
             render_vms_list(frame, app_state, vms_list_chunk);
 
             match start_stop_state.err_str {
-                Some(_) => render_start_stop_popup(frame, app_state),
+                Some(_) => render_start_stop_error_popup(frame, app_state),
                 None => match app_state.start_stop_vm() {
                     Ok(_) => app_state.current_screen = Screen::List, // Everything is fine, going back to the main screen
                     Err(err) => {
@@ -121,7 +121,7 @@ fn render_vms_list(frame: &mut Frame, app_state: &mut State, area: Rect) {
     frame.render_stateful_widget(table, area, &mut app_state.table_state);
 }
 
-fn render_start_stop_popup(frame: &mut Frame, app_state: &mut State) {
+fn render_start_stop_error_popup(frame: &mut Frame, app_state: &mut State) {
     // We first check if we have an error to display
     // If not, we don't do anything
     let (err_str, ref mut start_stop_state) = match app_state.current_screen.clone() {
