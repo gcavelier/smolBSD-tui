@@ -156,7 +156,7 @@ fn render_start_stop_error_popup(frame: &mut Frame, app_state: &mut State) {
         let top_block = Block::default()
             .title(title)
             .title_alignment(Alignment::Center)
-            .title_style(Style::new().red())
+            .title_style(Color::White)
             .borders(Borders::TOP | Borders::LEFT | Borders::RIGHT)
             .border_style(POPUP_BORDER_COLOR);
 
