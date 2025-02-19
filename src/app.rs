@@ -59,6 +59,7 @@ impl Vm {
                         .unwrap_or("utf8 error when convertir error string for libc");
                 }
                 if res == 0 {
+                    self.pid = None;
                     Ok(())
                 } else {
                     Err(format!("Failed to kill PID {pid}: {err_str}"))
