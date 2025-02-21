@@ -1,9 +1,9 @@
-use libc::{c_int, kill, strerror, SIGTERM};
+use libc::{SIGTERM, c_int, kill, strerror};
 use ratatui::widgets::{ScrollbarState, TableState};
 use std::{
     collections::HashMap,
     ffi::CStr,
-    fs::{read_to_string, DirEntry},
+    fs::{DirEntry, read_to_string},
     path::Path,
 };
 
@@ -24,7 +24,6 @@ pub enum Screen {
     DeleteConfirmation(bool),
 }
 
-#[derive(Debug)]
 pub struct Vm {
     /// Name of the config file without the '.conf' extension
     pub name: String,
