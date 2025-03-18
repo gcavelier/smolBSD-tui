@@ -29,20 +29,16 @@ pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
                 if key_event.kind == event::KeyEventKind::Press {
                     match key_event.code {
                         KeyCode::Down => {
-                            app_state.selected_vm_idx =
-                                (app_state.selected_vm_idx + 1).min(app_state.vms.len() - 1);
+                            app_state.table_state.select_next();
                         }
                         KeyCode::Up => {
-                            app_state.selected_vm_idx = match app_state.selected_vm_idx {
-                                0 => 0,
-                                _ => app_state.selected_vm_idx - 1,
-                            };
+                            app_state.table_state.select_previous();
                         }
                         KeyCode::Home => {
-                            app_state.selected_vm_idx = 0;
+                            app_state.table_state.select_first();
                         }
                         KeyCode::End => {
-                            app_state.selected_vm_idx = app_state.vms.len() - 1;
+                            app_state.table_state.select_last();
                         }
                         KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('Q') => {
                             app_state.exit = true;

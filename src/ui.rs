@@ -115,9 +115,6 @@ fn render_vms_list(frame: &mut Frame, app_state: &mut State, area: Rect) {
         )
         .row_highlight_style(Style::new().reversed());
     // VMs list
-    app_state
-        .table_state
-        .select(Some(app_state.selected_vm_idx));
     frame.render_stateful_widget(table, area, &mut app_state.table_state);
 }
 
@@ -132,7 +129,7 @@ fn render_start_stop_error_popup(frame: &mut Frame, app_state: &mut State) {
         _ => return,
     };
 
-    if let Some(current_vm) = app_state.vms.get(app_state.selected_vm_idx) {
+    if let Some(current_vm) = app_state.vms.get(app_state.table_state.selected().unwrap()) {
         let title = format!(
             " ❌ Error {} '{}' VM ❌ ",
             match current_vm.pid {
@@ -220,7 +217,7 @@ fn render_start_stop_error_popup(frame: &mut Frame, app_state: &mut State) {
 }
 
 fn render_delete_confirmation_popup(frame: &mut Frame, app_state: &mut State, ok: bool) {
-    if let Some(current_vm) = app_state.vms.get(app_state.selected_vm_idx) {
+    if let Some(current_vm) = app_state.vms.get(app_state.table_state.selected().unwrap()) {
         let title = " ❗ Delete VM ❗ ";
         let msg = format!("Are you sure you want to delete VM '{}'", current_vm.name);
 

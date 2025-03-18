@@ -76,7 +76,6 @@ pub struct State {
     pub kernels: Option<Vec<DirEntry>>,
     pub images: Option<Vec<DirEntry>>,
     pub table_state: TableState,
-    pub selected_vm_idx: usize, // idx in table_state
     pub current_screen: Screen,
     pub exit: bool,
 }
@@ -90,11 +89,13 @@ impl State {
             kernels: None,
             images: None,
             table_state: TableState::default(),
-            selected_vm_idx: 0,
             current_screen: Screen::List,
             exit: false,
         };
         state.refresh();
+        if !state.vms.is_empty() {
+            state.table_state.select(Some(0));
+        }
         Ok(state)
     }
     pub fn refresh(&mut self) {
@@ -107,55 +108,68 @@ impl State {
         self.vms = vms;
     }
     pub fn start_stop_vm(&mut self) -> Result<(), String> {
-        if let Some(current_vm) = self.vms.get_mut(self.selected_vm_idx) {
-            match current_vm.pid {
-                Some(_) => {
-                    return current_vm.kill();
-                }
-                None => {
-                    match std::process::Command::new(
-                        std::fs::canonicalize(format!("{}/startnb.sh", self.base_dir))
-                            .map_err(|err| format!("std::fs::canonicalize() failed: {err}"))?,
-                    )
-                    .args(["-f", &format!("etc/{}.conf", current_vm.name), "-d"])
-                    .current_dir(&self.base_dir)
-                    .output()
-                    {
-                        Ok(res) => {
-                            if res.stdout.is_empty() && res.stderr.is_empty() {
-                                // Updating the VM info
-                                current_vm.update_pid(&self.base_dir);
-                            } else {
-                                let err_str = format!(
-                                    "startnb.sh failed!\n{}{}",
-                                    String::from_utf8(res.stdout).unwrap(),
-                                    String::from_utf8(res.stderr).unwrap()
-                                );
-                                return Err(err_str);
-                            }
-                        }
-                        Err(err) => {
-                            let err_str = format!("std::process::Command::new() failed!\n{err}");
+        let current_vm_idx = match self.table_state.selected() {
+            Some(idx) => idx,
+            None => return Err("No VM selected!".to_string()),
+        };
+        let current_vm = self
+            .vms
+            .get_mut(current_vm_idx)
+            .ok_or(format!("Could not get_mut() VM at index {current_vm_idx}"))?;
+
+        match current_vm.pid {
+            Some(_) => {
+                return current_vm.kill();
+            }
+            None => {
+                match std::process::Command::new(
+                    std::fs::canonicalize(format!("{}/startnb.sh", self.base_dir))
+                        .map_err(|err| format!("std::fs::canonicalize() failed: {err}"))?,
+                )
+                .args(["-f", &format!("etc/{}.conf", current_vm.name), "-d"])
+                .current_dir(&self.base_dir)
+                .output()
+                {
+                    Ok(res) => {
+                        if res.stdout.is_empty() && res.stderr.is_empty() {
+                            // Updating the VM info
+                            current_vm.update_pid(&self.base_dir);
+                        } else {
+                            let err_str = format!(
+                                "startnb.sh failed!\n{}{}",
+                                String::from_utf8(res.stdout).unwrap(),
+                                String::from_utf8(res.stderr).unwrap()
+                            );
                             return Err(err_str);
                         }
+                    }
+                    Err(err) => {
+                        let err_str = format!("std::process::Command::new() failed!\n{err}");
+                        return Err(err_str);
                     }
                 }
             }
         }
+
         Ok(())
     }
 
     pub fn delete_vm(&mut self) {
-        let current_vm = match self.vms.get_mut(self.selected_vm_idx) {
+        let current_vm_idx = match self.table_state.selected() {
+            Some(idx) => idx,
+            None => return, // This should never happened
+        };
+        let current_vm = match self.vms.get_mut(current_vm_idx) {
             Some(vm) => vm,
-            None => return, // This should never happened (unless self.selected_vm_idx is incorrect)
+            None => return, // This should never happened
         };
         current_vm.pid.map(|_| current_vm.kill());
         let file_to_delete = format!("{}/etc/{}.conf", self.base_dir, current_vm.name);
         std::fs::remove_file(&file_to_delete)
             .unwrap_or_else(|_| panic!("Couldn't delete file {}", file_to_delete));
-        self.vms.remove(self.selected_vm_idx);
-        self.selected_vm_idx = self.selected_vm_idx.min(self.vms.len() - 1);
+        self.vms.remove(current_vm_idx);
+        self.table_state
+            .select(Some(current_vm_idx.min(self.vms.len() - 1)));
     }
 }
 
