@@ -38,10 +38,7 @@ impl Vm {
         self.pid = match Path::new(&pid_file).exists() {
             false => None,
             true => match read_to_string(pid_file) {
-                Ok(res) => match res.trim().parse() {
-                    Ok(value) => Some(value),
-                    Err(_) => None,
-                },
+                Ok(res) => res.trim().parse().ok(),
                 Err(_) => None,
             },
         }
