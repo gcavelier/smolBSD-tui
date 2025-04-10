@@ -98,17 +98,14 @@ impl State {
     pub fn refresh(&mut self) {
         let kernels = files_in_directory(&format!("{}/kernels", &self.base_dir)).ok();
         let images = files_in_directory(&format!("{}/images", &self.base_dir)).ok();
-        let mut vms = get_vms(&self.base_dir).map_or(vec![], |vms| vms);
+        let mut vms = get_vms(&self.base_dir).unwrap_or_else(|_| vec![]);
         vms.sort_by(|vm1, vm2| vm1.name.cmp(&vm2.name));
         self.kernels = kernels;
         self.images = images;
         self.vms = vms;
     }
     pub fn start_stop_vm(&mut self) -> Result<(), String> {
-        let current_vm_idx = match self.table_state.selected() {
-            Some(idx) => idx,
-            None => return Err("No VM selected!".to_string()),
-        };
+        let current_vm_idx = self.table_state.selected().ok_or("No VM selected!")?;
         let current_vm = self
             .vms
             .get_mut(current_vm_idx)
@@ -171,7 +168,8 @@ impl State {
 }
 
 fn get_vms(base_directory: &str) -> Result<Vec<Vm>, Box<dyn std::error::Error>> {
-    let conf_directory = format!("{}/etc", &base_directory);
+    let conf_directory = format!("{base_directory}/etc");
+
     let vm_confs = files_in_directory(&conf_directory)
         .ok()
         .map_or(vec![], |vm_confs| {
@@ -181,8 +179,7 @@ fn get_vms(base_directory: &str) -> Result<Vec<Vm>, Box<dyn std::error::Error>> 
                     // filename must ends with ".conf"
                     vm_conf_file
                         .file_name()
-                        .to_str()
-                        .unwrap_or("")
+                        .to_string_lossy()
                         .ends_with(".conf")
                 })
                 .filter_map(|vm_conf_file| {
@@ -197,7 +194,7 @@ fn get_vms(base_directory: &str) -> Result<Vec<Vm>, Box<dyn std::error::Error>> 
                                 && line.contains('=')
                         })
                         .map(|line| {
-                            // We already checked that 'line' contains '=', so the call to unwrap() will always succeed
+                            // We already checked that 'line' contains '=', so calling unwrap() is ok
                             let (key, value) = line.trim().split_once('=').unwrap();
                             (key.to_owned(), value.to_owned())
                         })
