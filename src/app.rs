@@ -24,15 +24,88 @@ pub enum Screen {
     DeleteConfirmation(bool),
 }
 
+#[derive(Default)]
 pub struct Vm {
+    ///
+    /// Mandatory parameters
+    ///
+
     /// Name of the config file without the '.conf' extension
     pub name: String,
-    config_data: HashMap<String, String>,
+    /// Disk image
+    pub img: String,
+    /// Kernel to load
+    pub kernel: String,
+
+    ///
+    /// Optional parameters
+    ///
+    pub mem: String,
+    pub cores: u8,
+    pub hostfwd: String,
+    pub editprotect: bool,
+    pub rmprotect: bool,
+    pub qmp_port: u16,
+    pub bridgenet: String,
+    pub share: String,
+    pub extra: String,
+
+    /// State
     pub pid: Option<i32>,
     pub cpu_usage: u8,
 }
 
 impl Vm {
+    fn new(vm_conf: Vec<(&str, &str)>, conf_file: &DirEntry) -> Result<Self, String> {
+        // Convert vm_conf into a hashmap to check if it contains all the mandatory keys
+        let mut vm_conf_hashmap: HashMap<&str, &str> = HashMap::new();
+        for (key, value) in &vm_conf {
+            vm_conf_hashmap.insert(*key, *value);
+        }
+
+        // Check if all the mandatory keys are present
+        if !vm_conf_hashmap.contains_key("img") {
+            return Err("Missing mandatory parameter 'img'".into());
+        }
+        if !vm_conf_hashmap.contains_key("kernel") {
+            return Err("Missing mandatory parameter 'kernel'".into());
+        }
+
+        let mut res = Vm::default();
+
+        res.name = conf_file
+            .file_name()
+            .to_string_lossy()
+            .strip_suffix(".conf")
+            // SAFETY: this unwrap always succeed (get_vms() filtered the .conf files)
+            .unwrap()
+            .to_string();
+
+        for (key, value) in vm_conf {
+            match key {
+                "vm" => {}
+                "img" => res.img = value.to_string(),
+                "kernel" => res.kernel = value.to_string(),
+                "mem" => res.mem = value.to_string(),
+                "cores" => {
+                    res.cores = value.parse().map_err(|err| {
+                        format!("Failed to convert 'cores' parameter to a u8: {err}")
+                    })?
+                }
+                "hostfwd" => res.hostfwd = value.to_string(),
+                "editprotect" => res.editprotect = parse_bool(value)?,
+                "rmprotect" => res.rmprotect = parse_bool(value)?,
+                "qmp_port" => res.qmp_port = value.parse().unwrap_or(0),
+                "bridgenet" => res.bridgenet = value.to_string(),
+                "share" => res.share = value.to_string(),
+                "extra" => res.extra = value.to_string(),
+                _ => {}
+            }
+        }
+
+        Ok(res)
+    }
+
     fn update_pid(&mut self, base_directory: &str) {
         let pid_file = format!("{}/qemu-{}.pid", base_directory, self.name);
         self.pid = match Path::new(&pid_file).exists() {
@@ -43,6 +116,7 @@ impl Vm {
             },
         }
     }
+
     fn kill(&mut self) -> Result<(), String> {
         match self.pid {
             Some(pid) => {
@@ -167,62 +241,49 @@ impl State {
     }
 }
 
+///
+/// This function reads all the files in {base_directory}/etc/ and, for each file,
+/// it will construct the corresponding Vm struct.
+///
+/// If a configuration file contains an unknown parameter or an invalid value,
+/// the whole Vm struct will be discarded and the Vm won't be shown at all.
+///
 fn get_vms(base_directory: &str) -> Result<Vec<Vm>, Box<dyn std::error::Error>> {
-    let conf_directory = format!("{base_directory}/etc");
+    // This is the Vec we will return
+    let mut vm_confs: Vec<Vm> = Vec::new();
 
-    let vm_confs = files_in_directory(&conf_directory)
-        .ok()
-        .map_or(vec![], |vm_confs| {
-            vm_confs
-                .iter()
-                .filter(|vm_conf_file| {
-                    // filename must ends with ".conf"
-                    vm_conf_file
-                        .file_name()
-                        .to_string_lossy()
-                        .ends_with(".conf")
-                })
-                .filter_map(|vm_conf_file| {
-                    // Converts file into a HashMap
-                    let vm_conf = std::fs::read_to_string(vm_conf_file.path()).ok()?;
-                    let hashmap: HashMap<String, String> = vm_conf
-                        .lines()
-                        .filter(|line| {
-                            // Filter out those lines
-                            !line.starts_with('#')
-                                && !line.starts_with("extra")
-                                && line.contains('=')
-                        })
-                        .map(|line| {
-                            // We already checked that 'line' contains '=', so calling unwrap() is ok
-                            let (key, value) = line.trim().split_once('=').unwrap();
-                            (key.to_owned(), value.to_owned())
-                        })
-                        .collect();
-                    // If the hashmap doesn't contain the 'vm' key, we discard it
-                    hashmap.contains_key("vm").then(|| {
-                        (
-                            hashmap,
-                            vm_conf_file
-                                .file_name()
-                                .into_string()
-                                .unwrap_or("".to_string()),
-                        )
-                    })
-                })
-                .map(|(config_data, vm_conf_file)| {
-                    let vm_conf_file = vm_conf_file.strip_suffix(".conf").unwrap(); // We filtered the files ending with '.conf', so this unwrap() always succeed
-                    let mut vm = Vm {
-                        pid: None,
-                        name: vm_conf_file.to_string(),
-                        config_data,
-                        cpu_usage: 0,
-                    };
-                    vm.update_pid(base_directory);
-                    vm
-                })
-                .collect()
-        });
+    // We only want to get the .conf files
+    let conf_files: Vec<_> = files_in_directory(&format!("{base_directory}/etc"))?
+        .into_iter()
+        .filter(|file| file.file_name().to_string_lossy().ends_with(".conf"))
+        .collect();
+
+    for conf_file in conf_files {
+        let vm_conf_file_data = std::fs::read_to_string(conf_file.path())?;
+        let vm_conf: Vec<(&str, &str)> = vm_conf_file_data
+            .lines()
+            .filter(|line| !line.starts_with('#') && line.contains('='))
+            .map(|line| {
+                // We already checked that 'line' contains '=', so calling unwrap() is ok
+                let (key, value) = line.split_once('=').unwrap();
+                (key, value)
+            })
+            .collect();
+
+        match Vm::new(vm_conf, &conf_file) {
+            Ok(vm) => vm_confs.push(vm),
+            //
+            // TODO: indicate an "invalid" state showing the reason it is invalid ?
+            // => This implies replacing the "RUNNING" column in the UI with a "STATE" column
+            // for example
+            //
+            Err(err) => {
+                println!("{}: {err}", conf_file.file_name().to_string_lossy());
+                continue;
+            }
+        };
+    }
+
     Ok(vm_confs)
 }
 
@@ -232,4 +293,12 @@ fn files_in_directory(directory: &str) -> Result<Vec<DirEntry>, Box<dyn std::err
         .filter(|dir_entry| dir_entry.file_type().is_ok_and(|entry| entry.is_file()))
         .collect();
     Ok(res)
+}
+
+fn parse_bool(input: &str) -> Result<bool, String> {
+    match input {
+        "true" | "True" => Ok(true),
+        "false" | "False" => Ok(false),
+        _ => Err(format!("cannot convert '{input}' into a boolean")),
+    }
 }

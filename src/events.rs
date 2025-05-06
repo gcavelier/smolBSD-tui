@@ -18,6 +18,7 @@ pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
         let (ms_elapsed, _) = app_state.ms_elapsed.overflowing_add(POLL_INTERVAL_MS);
         app_state.ms_elapsed = ms_elapsed;
         if app_state.ms_elapsed % (LIST_REFRESH_INTERVAL_SEC * 1000) == 0 {
+            // TODO: use the 'notify' crate instead of this hack!
             app_state.refresh();
         }
         return Ok(());
