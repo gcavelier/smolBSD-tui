@@ -71,15 +71,16 @@ impl Vm {
             return Err("Missing mandatory parameter 'kernel'".into());
         }
 
-        let mut res = Vm::default();
-
-        res.name = conf_file
-            .file_name()
-            .to_string_lossy()
-            .strip_suffix(".conf")
-            // SAFETY: this unwrap always succeed (get_vms() filtered the .conf files)
-            .unwrap()
-            .to_string();
+        let mut res = Vm {
+            name: conf_file
+                .file_name()
+                .to_string_lossy()
+                .strip_suffix(".conf")
+                // SAFETY: this unwrap always succeed (get_vms() filtered the .conf files)
+                .unwrap()
+                .to_string(),
+            ..Default::default()
+        };
 
         for (key, value) in vm_conf {
             match key {
