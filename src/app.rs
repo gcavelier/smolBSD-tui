@@ -272,7 +272,10 @@ fn get_vms(base_directory: &str) -> Result<Vec<Vm>, Box<dyn std::error::Error>> 
             .collect();
 
         match Vm::new(vm_conf, &conf_file) {
-            Ok(vm) => vm_confs.push(vm),
+            Ok(mut vm) => {
+                vm.update_pid(base_directory);
+                vm_confs.push(vm)
+            }
             //
             // TODO: indicate an "invalid" state showing the reason it is invalid ?
             // => This implies replacing the "RUNNING" column in the UI with a "STATE" column
