@@ -200,7 +200,7 @@ impl State {
                 .output()
                 {
                     Ok(res) => {
-                        if res.stdout.is_empty() && res.stderr.is_empty() {
+                        if res.status.success() {
                             // Updating the VM info
                             current_vm.update_pid(&self.base_dir);
                         } else {
