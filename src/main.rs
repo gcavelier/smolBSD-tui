@@ -1,6 +1,8 @@
-use std::path::Path;
+use std::{path::Path, sync::mpsc::Receiver};
 
-use ratatui::DefaultTerminal;
+use ratatui::{DefaultTerminal, crossterm};
+
+use crate::events::AppEvent;
 
 mod app;
 mod events;
@@ -43,7 +45,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app_state = app::State::new(base_dir)?;
     let terminal = ratatui::init();
-    let result = run(terminal, app_state);
+    let (tx, rx) = std::sync::mpsc::channel::<AppEvent>();
+
+    // Starting a thread to listen to key events
+    std::thread::spawn(move || {
+        loop {
+            let event = crossterm::event::read().unwrap();
+            match event {
+                crossterm::event::Event::FocusGained => (),
+                crossterm::event::Event::FocusLost => (),
+                crossterm::event::Event::Key(key_event) => {
+                    tx.send(AppEvent::Key(key_event)).unwrap()
+                }
+                crossterm::event::Event::Mouse(_) => (),
+                crossterm::event::Event::Paste(_) => (),
+                crossterm::event::Event::Resize(_, _) => (),
+            }
+        }
+    });
+
+    let result = run(terminal, app_state, rx);
     ratatui::restore();
     result
 }
@@ -51,11 +72,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn run(
     mut terminal: DefaultTerminal,
     mut app_state: app::State,
+    rx: Receiver<AppEvent>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     while !app_state.exit {
         terminal.draw(|frame| ui::render(frame, &mut app_state))?;
-        if events::handle(&mut app_state).is_err() {
-            // This waits for the next event
+
+        // Wait for an event
+        let event = rx.recv().unwrap();
+
+        if events::handle(&mut app_state, event).is_err() {
             // TODO: better error handling ?
             break;
         }

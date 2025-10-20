@@ -1,67 +1,47 @@
-use std::time::Duration;
-
 use ratatui::{
-    crossterm::event::{self, Event, KeyCode},
+    crossterm::event::{self, KeyCode, KeyEvent},
     widgets::ScrollbarState,
 };
 
-const POLL_INTERVAL_MS: u64 = 100;
-const LIST_REFRESH_INTERVAL_SEC: u64 = 2;
-
 use crate::app::{Screen, StartStopState, State};
 
-pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
-    // We wait POLL_INTERVAL_MS for a key
-    let key = if event::poll(Duration::from_millis(POLL_INTERVAL_MS))? {
-        event::read()?
-    } else {
-        let (ms_elapsed, _) = app_state.ms_elapsed.overflowing_add(POLL_INTERVAL_MS);
-        app_state.ms_elapsed = ms_elapsed;
-        if app_state.ms_elapsed % (LIST_REFRESH_INTERVAL_SEC * 1000) == 0 {
-            // TODO: use the 'notify' crate instead of this hack!
-            app_state.refresh();
-        }
-        return Ok(());
-    };
+pub enum AppEvent {
+    Key(KeyEvent),
+}
 
-    match app_state.current_screen {
-        Screen::List => {
-            if let Event::Key(key_event) = key {
-                if key_event.kind == event::KeyEventKind::Press {
-                    match key_event.code {
-                        KeyCode::Down => {
-                            app_state.table_state.select_next();
-                        }
-                        KeyCode::Up => {
-                            app_state.table_state.select_previous();
-                        }
-                        KeyCode::Home => {
-                            app_state.table_state.select_first();
-                        }
-                        KeyCode::End => {
-                            app_state.table_state.select_last();
-                        }
-                        KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('Q') => {
-                            app_state.exit = true;
-                        }
-                        KeyCode::Char('s') => {
-                            app_state.current_screen = Screen::StartStop(StartStopState {
-                                err_str: None,
-                                vertical_scroll_bar_pos: 0,
-                                vertical_scroll_bar_state: ScrollbarState::default(),
-                            })
-                        }
-                        KeyCode::Char('d') => {
-                            app_state.current_screen = Screen::DeleteConfirmation(false);
-                        }
-                        _ => {}
+pub fn handle(app_state: &mut State, event: AppEvent) -> Result<(), Box<dyn std::error::Error>> {
+    match event {
+        AppEvent::Key(key_event) if key_event.kind == event::KeyEventKind::Press => {
+            match app_state.current_screen {
+                Screen::List => match key_event.code {
+                    KeyCode::Down => {
+                        app_state.table_state.select_next();
                     }
-                }
-            }
-        }
-        Screen::StartStop(ref mut _start_stop_state) => {
-            if let Event::Key(key_event) = key {
-                if key_event.kind == event::KeyEventKind::Press {
+                    KeyCode::Up => {
+                        app_state.table_state.select_previous();
+                    }
+                    KeyCode::Home => {
+                        app_state.table_state.select_first();
+                    }
+                    KeyCode::End => {
+                        app_state.table_state.select_last();
+                    }
+                    KeyCode::Esc | KeyCode::Char('q') | KeyCode::Char('Q') => {
+                        app_state.exit = true;
+                    }
+                    KeyCode::Char('s') => {
+                        app_state.current_screen = Screen::StartStop(StartStopState {
+                            err_str: None,
+                            vertical_scroll_bar_pos: 0,
+                            vertical_scroll_bar_state: ScrollbarState::default(),
+                        })
+                    }
+                    KeyCode::Char('d') => {
+                        app_state.current_screen = Screen::DeleteConfirmation(false);
+                    }
+                    _ => {}
+                },
+                Screen::StartStop(ref mut _start_stop_state) => {
                     match key_event.code {
                         KeyCode::Esc | KeyCode::Enter => app_state.current_screen = Screen::List,
                         // TODO: uncomment when max scroll position is handled
@@ -80,35 +60,28 @@ pub fn handle(app_state: &mut State) -> Result<(), Box<dyn std::error::Error>> {
                         _ => {}
                     }
                 }
-            }
-        }
-        Screen::DeleteConfirmation(ok) => {
-            if let Event::Key(key_event) = key {
-                if key_event.kind == event::KeyEventKind::Press {
-                    match key_event.code {
-                        KeyCode::Esc => {
-                            app_state.current_screen = Screen::List;
-                        }
-                        KeyCode::Left => {
-                            app_state.current_screen = Screen::DeleteConfirmation(true)
-                        }
-                        KeyCode::Right => {
-                            app_state.current_screen = Screen::DeleteConfirmation(false)
-                        }
-                        KeyCode::Tab => {
-                            app_state.current_screen = Screen::DeleteConfirmation(!ok);
-                        }
-                        KeyCode::Enter => {
-                            if ok {
-                                app_state.delete_vm()
-                            }
-                            app_state.current_screen = Screen::List;
-                        }
-                        _ => {}
+                Screen::DeleteConfirmation(ok) => match key_event.code {
+                    KeyCode::Esc => {
+                        app_state.current_screen = Screen::List;
                     }
-                }
+                    KeyCode::Left => app_state.current_screen = Screen::DeleteConfirmation(true),
+                    KeyCode::Right => app_state.current_screen = Screen::DeleteConfirmation(false),
+                    KeyCode::Tab => {
+                        app_state.current_screen = Screen::DeleteConfirmation(!ok);
+                    }
+                    KeyCode::Enter => {
+                        if ok {
+                            app_state.delete_vm()
+                        }
+                        app_state.current_screen = Screen::List;
+                    }
+                    _ => {}
+                },
             }
         }
+        // key_event.kind != event::KeyEventKind::Press
+        // => doing nothing
+        AppEvent::Key(_) => {}
     }
 
     Ok(())
