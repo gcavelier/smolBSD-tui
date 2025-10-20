@@ -1,6 +1,6 @@
-use std::{path::Path, sync::mpsc::Receiver};
+use std::path::Path;
 
-use ratatui::{DefaultTerminal, crossterm};
+use ratatui::crossterm;
 
 use crate::events::AppEvent;
 
@@ -43,10 +43,9 @@ fn get_base_dir_arg() -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let base_dir = get_base_dir_arg().ok_or("Failed to find mandatory files or directories")?;
 
-    let terminal = ratatui::init();
     let (tx, rx) = std::sync::mpsc::channel::<AppEvent>();
 
-    let app_state = app::State::new(base_dir, tx.clone())?;
+    let mut app_state = app::State::new(base_dir, tx.clone())?;
 
     // Starting a thread to listen to key events
     std::thread::spawn(move || {
@@ -65,27 +64,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let result = run(terminal, app_state, rx);
-    ratatui::restore();
-    result
-}
+    ratatui::run(|terminal| {
+        while !app_state.exit {
+            terminal.draw(|frame| ui::render(frame, &mut app_state))?;
 
-fn run(
-    mut terminal: DefaultTerminal,
-    mut app_state: app::State,
-    rx: Receiver<AppEvent>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    while !app_state.exit {
-        terminal.draw(|frame| ui::render(frame, &mut app_state))?;
+            // Wait for an event
+            let event = rx.recv().unwrap();
 
-        // Wait for an event
-        let event = rx.recv().unwrap();
-
-        if events::handle(&mut app_state, event).is_err() {
-            // TODO: better error handling ?
-            break;
+            if events::handle(&mut app_state, event).is_err() {
+                // This waits for the next event
+                // TODO: better error handling ?
+                break;
+            }
         }
-    }
-
-    Ok(())
+        Ok(())
+    })
 }
