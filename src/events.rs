@@ -7,6 +7,7 @@ use crate::app::{Screen, StartStopState, State};
 
 pub enum AppEvent {
     Key(KeyEvent),
+    StartNbOutput(Result<std::process::Output, std::io::Error>),
 }
 
 pub fn handle(app_state: &mut State, event: AppEvent) -> Result<(), Box<dyn std::error::Error>> {
@@ -79,9 +80,37 @@ pub fn handle(app_state: &mut State, event: AppEvent) -> Result<(), Box<dyn std:
                 },
             }
         }
-        // key_event.kind != event::KeyEventKind::Press
-        // => doing nothing
         AppEvent::Key(_) => {}
+        AppEvent::StartNbOutput(output) => {
+            match output {
+                Ok(res) => {
+                    if res.status.success() {
+                        // Updating the VM info
+                        //current_vm.update_pid(&app_state.base_dir);
+                        app_state.refresh();
+                    } else {
+                        let err_str = format!(
+                            "startnb.sh failed!\n{}{}",
+                            String::from_utf8(res.stdout).unwrap(),
+                            String::from_utf8(res.stderr).unwrap()
+                        );
+                        app_state.current_screen = Screen::StartStop(StartStopState {
+                            err_str: Some(err_str),
+                            vertical_scroll_bar_pos: 0,
+                            vertical_scroll_bar_state: ScrollbarState::default(),
+                        });
+                    }
+                }
+                Err(err) => {
+                    let err_str = format!("std::process::Command::new() failed!\n{err}");
+                    app_state.current_screen = Screen::StartStop(StartStopState {
+                        err_str: Some(err_str),
+                        vertical_scroll_bar_pos: 0,
+                        vertical_scroll_bar_state: ScrollbarState::default(),
+                    });
+                }
+            }
+        }
     }
 
     Ok(())

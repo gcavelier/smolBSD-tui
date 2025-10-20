@@ -43,9 +43,10 @@ fn get_base_dir_arg() -> Option<String> {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let base_dir = get_base_dir_arg().ok_or("Failed to find mandatory files or directories")?;
 
-    let app_state = app::State::new(base_dir)?;
     let terminal = ratatui::init();
     let (tx, rx) = std::sync::mpsc::channel::<AppEvent>();
+
+    let app_state = app::State::new(base_dir, tx.clone())?;
 
     // Starting a thread to listen to key events
     std::thread::spawn(move || {

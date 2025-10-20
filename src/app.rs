@@ -5,7 +5,10 @@ use std::{
     ffi::CStr,
     fs::{DirEntry, read_to_string},
     path::Path,
+    sync::mpsc::Sender,
 };
+
+use crate::events::AppEvent;
 
 #[derive(Clone, PartialEq)]
 pub struct StartStopState {
@@ -150,10 +153,11 @@ pub struct State {
     pub table_state: TableState,
     pub current_screen: Screen,
     pub exit: bool,
+    pub tx: Sender<AppEvent>,
 }
 
 impl State {
-    pub fn new(base_dir: String) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(base_dir: String, tx: Sender<AppEvent>) -> Result<Self, Box<dyn std::error::Error>> {
         let mut state = State {
             base_dir,
             ms_elapsed: 0,
@@ -163,6 +167,7 @@ impl State {
             table_state: TableState::default(),
             current_screen: Screen::List,
             exit: false,
+            tx,
         };
         state.refresh();
         if !state.vms.is_empty() {
@@ -191,32 +196,22 @@ impl State {
                 return current_vm.kill();
             }
             None => {
-                match std::process::Command::new(
-                    std::fs::canonicalize(format!("{}/startnb.sh", self.base_dir))
-                        .map_err(|err| format!("std::fs::canonicalize() failed: {err}"))?,
-                )
-                .args(["-f", &format!("etc/{}.conf", current_vm.name), "-d"])
-                .current_dir(&self.base_dir)
-                .output()
-                {
-                    Ok(res) => {
-                        if res.status.success() {
-                            // Updating the VM info
-                            current_vm.update_pid(&self.base_dir);
-                        } else {
-                            let err_str = format!(
-                                "startnb.sh failed!\n{}{}",
-                                String::from_utf8(res.stdout).unwrap(),
-                                String::from_utf8(res.stderr).unwrap()
-                            );
-                            return Err(err_str);
-                        }
-                    }
-                    Err(err) => {
-                        let err_str = format!("std::process::Command::new() failed!\n{err}");
-                        return Err(err_str);
-                    }
-                }
+                // Calling startnb.sh in a new thread
+                let conf_file = format!("etc/{}.conf", current_vm.name);
+                let base_dir = self.base_dir.clone();
+                let tx = self.tx.clone();
+                std::thread::spawn(move || {
+                    let startnb_output = std::process::Command::new(
+                        std::fs::canonicalize(format!("{}/startnb.sh", base_dir))
+                            .map_err(|err| format!("std::fs::canonicalize() failed: {err}"))
+                            .unwrap(),
+                    )
+                    .args(["-f", &conf_file, "-d"])
+                    .current_dir(&base_dir)
+                    .output();
+
+                    tx.send(AppEvent::StartNbOutput(startnb_output)).unwrap();
+                });
             }
         }
 
