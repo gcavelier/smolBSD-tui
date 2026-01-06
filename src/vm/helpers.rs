@@ -1,4 +1,4 @@
-use std::fs::DirEntry;
+use std::{fs::DirEntry, path::PathBuf};
 
 use crate::vm::Vm;
 
@@ -17,23 +17,31 @@ pub fn get_vms(base_directory: &str) -> Result<Vec<Vm>, Box<dyn std::error::Erro
         .collect();
 
     for conf_file in conf_files {
-        let vm_conf_file_data = std::fs::read_to_string(conf_file.path())?;
-        let vm_conf: Vec<(&str, &str)> = vm_conf_file_data
-            .lines()
-            .filter(|line| !line.starts_with('#') && line.contains('='))
-            .map(|line| {
-                // We already checked that 'line' contains '=', so calling unwrap() is ok
-                let (key, value) = line.split_once('=').unwrap();
-                (key, value)
-            })
-            .collect();
-
-        let mut vm = Vm::new(vm_conf, &conf_file);
-        vm.update_state(base_directory);
+        let vm = vm_from_conf(conf_file.path(), base_directory)?;
         vm_confs.push(vm);
     }
 
     Ok(vm_confs)
+}
+
+pub fn vm_from_conf(
+    conf_file: PathBuf,
+    base_directory: &str,
+) -> Result<Vm, Box<dyn std::error::Error>> {
+    let vm_conf_file_data = std::fs::read_to_string(&conf_file)?;
+    let vm_conf: Vec<(&str, &str)> = vm_conf_file_data
+        .lines()
+        .filter(|line| !line.starts_with('#') && line.contains('='))
+        .map(|line| {
+            // We already checked that 'line' contains '=', so calling unwrap() is ok
+            let (key, value) = line.split_once('=').unwrap();
+            (key, value)
+        })
+        .collect();
+
+    let mut vm = Vm::new(vm_conf, &conf_file);
+    vm.update_state(base_directory);
+    Ok(vm)
 }
 
 pub fn files_in_directory(directory: &str) -> Result<Vec<DirEntry>, Box<dyn std::error::Error>> {

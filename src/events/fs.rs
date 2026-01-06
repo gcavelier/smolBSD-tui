@@ -60,8 +60,6 @@ fn send_file_event(
     paths: Vec<PathBuf>,
     operation: FileOperation,
 ) {
-    eprintln!("operation: {operation:?}, paths: {paths:?}");
-
     if paths.len() > 1 {
         // FIXME: does this ever happen ?
         app_tx
@@ -72,20 +70,22 @@ fn send_file_event(
         return;
     }
 
-    if let Some(path) = paths.into_iter().next()
-        && let Ok(filename) = path
+    if let Some(absolute_filename) = paths.into_iter().next()
+        && let Ok(relative_filename) = absolute_filename
             .strip_prefix(base_dir)
             .map(|value| value.to_str().unwrap_or(""))
     {
-        let event = if let Some(filename) = filename.strip_prefix("etc/") {
+        let event = if let Some(filename) = relative_filename.strip_prefix("etc/")
+            && let Some(_vm_name) = filename.strip_suffix(".conf")
+        {
             // VM configuration file
-            let filename = filename.to_owned();
+            let absolute_filename = absolute_filename.to_str().unwrap().to_owned();
             Some(match operation {
-                FileOperation::Created => AppEvent::VmConfCreated(filename),
-                FileOperation::Modified => AppEvent::VmConfModified(filename),
-                FileOperation::Deleted => AppEvent::VmConfDeleted(filename),
+                FileOperation::Created => AppEvent::VmConfCreated(absolute_filename),
+                FileOperation::Modified => AppEvent::VmConfModified(absolute_filename),
+                FileOperation::Deleted => AppEvent::VmConfDeleted(absolute_filename),
             })
-        } else if let Some(filename) = filename.strip_prefix("images/") {
+        } else if let Some(filename) = relative_filename.strip_prefix("images/") {
             // image file
             let filename = filename.to_owned();
             Some(match operation {
@@ -93,7 +93,7 @@ fn send_file_event(
                 FileOperation::Modified => AppEvent::ImageFileModified(filename),
                 FileOperation::Deleted => AppEvent::ImageFileDeleted(filename),
             })
-        } else if let Some(filename) = filename.strip_prefix("kernels/") {
+        } else if let Some(filename) = relative_filename.strip_prefix("kernels/") {
             // kernel file
             let filename = filename.to_owned();
             Some(match operation {
@@ -101,15 +101,15 @@ fn send_file_event(
                 FileOperation::Modified => AppEvent::KernelModified(filename),
                 FileOperation::Deleted => AppEvent::KernelDeleted(filename),
             })
-        } else if let Some(vmname) = filename.strip_prefix("qemu-")
-            && let Some(vmname) = vmname.strip_suffix(".pid")
+        } else if let Some(vm_name) = relative_filename.strip_prefix("qemu-")
+            && let Some(vm_name) = vm_name.strip_suffix(".pid")
         {
             // QEMU PID file
-            let vmname = vmname.to_owned();
+            let vm_name = vm_name.to_owned();
             match operation {
                 FileOperation::Created => None,
                 FileOperation::Modified => None,
-                FileOperation::Deleted => Some(AppEvent::PidFileDeleted(vmname)),
+                FileOperation::Deleted => Some(AppEvent::PidFileDeleted(vm_name)),
             }
         } else {
             None

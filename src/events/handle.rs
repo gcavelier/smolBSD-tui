@@ -94,7 +94,9 @@ pub fn handle(app: &mut State, event: AppEvent) -> Result<(), Box<dyn std::error
         }
         AppEvent::FatalError(err) => app.fatal_error = Some(err),
 
-        AppEvent::VmConfCreated(filename) => {}
+        AppEvent::VmConfCreated(filename) => {
+            app.add_vm(&filename);
+        }
         AppEvent::VmConfModified(filename) => {}
         AppEvent::VmConfDeleted(filename) => {}
         AppEvent::KernelCreated(filename) => {}

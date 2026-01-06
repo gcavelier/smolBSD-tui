@@ -1,6 +1,6 @@
 use std::ffi::CStr;
 use std::fs::read_to_string;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::{collections::HashMap, fs::DirEntry};
 
 use libc::c_int;
@@ -50,12 +50,14 @@ pub struct Vm {
 }
 
 impl Vm {
-    pub fn new(vm_conf: Vec<(&str, &str)>, conf_file: &DirEntry) -> Self {
+    pub fn new(vm_conf: Vec<(&str, &str)>, conf_file: &PathBuf) -> Self {
         // This will be the returned struct
         let mut res = Vm {
             name: conf_file
                 .file_name()
-                .to_string_lossy()
+                .unwrap()
+                .to_str()
+                .unwrap()
                 .strip_suffix(".conf")
                 // SAFETY: this unwrap always succeed (get_vms() filtered the .conf files)
                 .unwrap()

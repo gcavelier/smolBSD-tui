@@ -6,6 +6,7 @@ use ratatui::widgets::TableState;
 use ratatui_image::picker::Picker;
 use ratatui_image::protocol::StatefulProtocol;
 use std::fs::DirEntry;
+use std::path::PathBuf;
 use std::sync::mpsc::Sender;
 
 pub struct State {
@@ -58,6 +59,7 @@ impl State {
         })
     }
 
+    #[must_use]
     pub fn get_mut_vm_by_name(&mut self, name: &str) -> Option<&mut Vm> {
         self.vms.iter_mut().find(|item| item.name.as_str() == name)
     }
@@ -164,6 +166,7 @@ impl State {
                         .unwrap()
                 });
                 selected_vm.state = VmState::StoppingToDelete;
+                // The VM will be deleted when the PID file will be deleted, not right now
             } else {
                 // The VM is not running, we can delete it right away
                 let file_to_delete = format!("{}/etc/{}.conf", self.base_dir, selected_vm.name);
@@ -174,6 +177,26 @@ impl State {
                     true => None,
                     false => Some(selected_vm_idx.min(self.vms.len() - 1)),
                 });
+            }
+        }
+    }
+
+    /// `conf_file` **must** be an absolute path
+    pub fn add_vm(&mut self, conf_file: &str) {
+        let relative_conf_file = conf_file.strip_prefix(&self.base_dir).unwrap();
+
+        if let Some(vm_name) = relative_conf_file
+            .strip_prefix("etc/")
+            .and_then(|value| value.strip_suffix(".conf"))
+        {
+            if self.get_mut_vm_by_name(vm_name).is_none() {
+                // This VM doesn't already exist, we can create it
+                let conf_file = PathBuf::from(conf_file);
+                if let Ok(vm) = vm::helpers::vm_from_conf(conf_file, &self.base_dir) {
+                    self.vms.push(vm);
+                    // Sort VMs by name
+                    self.vms.sort_by(|vm1, vm2| vm1.name.cmp(&vm2.name));
+                }
             }
         }
     }
