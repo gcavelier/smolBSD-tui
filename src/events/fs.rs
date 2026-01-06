@@ -107,7 +107,7 @@ fn send_file_event(
             // QEMU PID file
             let vm_name = vm_name.to_owned();
             match operation {
-                FileOperation::Created => None,
+                FileOperation::Created => Some(AppEvent::PidFileCreated(vm_name)),
                 FileOperation::Modified => None,
                 FileOperation::Deleted => Some(AppEvent::PidFileDeleted(vm_name)),
             }

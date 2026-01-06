@@ -27,8 +27,6 @@ impl State {
         let base_dir =
             args::get_base_dir().ok_or("Failed to find mandatory files or directories")?;
 
-        eprintln!("base_dir={base_dir}");
-
         let mut vms = vm::helpers::get_vms(&base_dir)
             .map_err(|err| eprintln!("Failed to read VMs configurations: {err}"))
             .unwrap();

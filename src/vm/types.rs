@@ -1,7 +1,7 @@
+use std::collections::HashMap;
 use std::ffi::CStr;
 use std::fs::read_to_string;
 use std::path::{Path, PathBuf};
-use std::{collections::HashMap, fs::DirEntry};
 
 use libc::c_int;
 use ratatui::style::Color;
@@ -9,6 +9,7 @@ use ratatui::style::Color;
 use crate::ui::{INVALID_CONF_VM_FG, RUNNING_VM_FG, STARTING_VM_FG, STOPPED_VM_FG, STOPPING_VM_FG};
 use crate::vm;
 
+#[derive(Debug)]
 pub enum VmState {
     InvalidConfiguration { cause: String },
     Starting,
@@ -18,6 +19,7 @@ pub enum VmState {
     Stopped,
 }
 
+#[derive(Debug)]
 pub struct Vm {
     ///
     /// Mandatory parameters
@@ -171,31 +173,11 @@ impl Vm {
 
     pub fn update_state(&mut self, base_directory: &str) {
         match &self.state {
-            VmState::Starting
-            | VmState::Running { .. }
-            | VmState::Stopped
-            | VmState::Stopping
-            | VmState::StoppingToDelete => {
-                let pid_file = format!("{}/qemu-{}.pid", base_directory, self.name);
-                // TODO: use fs:exists()
-                if Path::new(&pid_file).exists() {
-                    self.state = match read_to_string(&pid_file) {
-                        Ok(res) => match res.trim().parse() {
-                            Ok(res) => VmState::Running { pid: res },
-                            Err(err) => VmState::InvalidConfiguration {
-                                cause: format!("Failed to parse pid file {pid_file}: {err}"),
-                            },
-                        },
-                        Err(err) => VmState::InvalidConfiguration {
-                            cause: format!("Failed to read pid file {pid_file}: {err}"),
-                        },
-                    }
-                } else {
-                    self.state = VmState::Stopped
-                }
+            VmState::Starting | VmState::Running { .. } | VmState::Stopped | VmState::Stopping => {
+                self.set_pid(base_directory);
             }
-            // We don't do anything in this case
-            VmState::InvalidConfiguration { .. } => {}
+            // We don't do anything in those cases
+            VmState::InvalidConfiguration { .. } | VmState::StoppingToDelete => {}
         }
     }
 
@@ -223,5 +205,31 @@ impl Vm {
 
     pub fn is_running(&self) -> bool {
         matches!(self.state, VmState::Running { .. })
+    }
+
+    pub fn set_pid(&mut self, base_directory: &str) {
+        match &self.state {
+            VmState::Stopped | VmState::Starting => {
+                let pid_file = format!("{}/qemu-{}.pid", base_directory, self.name);
+                if let Ok(res) = std::fs::exists(&pid_file)
+                    && res == true
+                {
+                    self.state = match read_to_string(&pid_file) {
+                        Ok(res) => match res.trim().parse() {
+                            Ok(res) => VmState::Running { pid: res },
+                            Err(err) => VmState::InvalidConfiguration {
+                                cause: format!("Failed to parse pid file {pid_file}: {err}"),
+                            },
+                        },
+                        Err(err) => VmState::InvalidConfiguration {
+                            cause: format!("Failed to read pid file {pid_file}: {err}"),
+                        },
+                    }
+                } else {
+                    self.state = VmState::Stopped
+                }
+            }
+            _ => {}
+        }
     }
 }

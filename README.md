@@ -14,7 +14,10 @@ It is written in Rust using the [ratatui](https://ratatui.rs/) library
 - [ ] Create a new VM
 - [ ] Edit an exiting VM
 - [ ] Display the CPU usage
-- [ ] Use the `notify` crates to reload the app state when a file changes in `etc/`, `images/` or `kernel/`
+- [ ] Use the `notify` crates to reload the app state when a file changes in
+    - [X] `etc/`
+    - [ ] `images/`
+    - [ ] `kernel/`
 - [ ] Connect to the console
 - [ ] Filter kernels/images filenames
 - [ ] Add smolBSD logo in the top right corner

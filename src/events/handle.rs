@@ -97,23 +97,41 @@ pub fn handle(app: &mut State, event: AppEvent) -> Result<(), Box<dyn std::error
         AppEvent::VmConfCreated(filename) => {
             app.add_vm(&filename);
         }
+
         AppEvent::VmConfModified(filename) => {}
+
         AppEvent::VmConfDeleted(filename) => {
             app.delete_vm(&filename);
         }
+
         AppEvent::KernelCreated(filename) => {}
+
         AppEvent::KernelModified(filename) => {}
+
         AppEvent::KernelDeleted(filename) => {}
+
         AppEvent::PidFileDeleted(vm_name) => {
             if let Some(vm) = app.get_mut_vm_by_name(&vm_name) {
                 match vm.state {
-                    VmState::StoppingToDelete => app.vms.retain(|item| item.name != vm_name),
+                    VmState::StoppingToDelete => {
+                        app.vms.retain(|item| item.name != vm_name);
+                    }
                     _ => vm.state = VmState::Stopped,
                 }
             }
         }
+
+        AppEvent::PidFileCreated(vm_name) => {
+            let base_dir = app.base_dir.clone();
+            if let Some(vm) = app.get_mut_vm_by_name(&vm_name) {
+                vm.set_pid(&base_dir);
+            }
+        }
+
         AppEvent::ImageFileCreated(filename) => {}
+
         AppEvent::ImageFileModified(filename) => {}
+
         AppEvent::ImageFileDeleted(filename) => {}
     }
 

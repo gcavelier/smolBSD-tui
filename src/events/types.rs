@@ -25,6 +25,7 @@ pub enum AppEvent {
     KernelModified(String),
     KernelDeleted(String),
     PidFileDeleted(String),
+    PidFileCreated(String),
     ImageFileCreated(String),
     ImageFileModified(String),
     ImageFileDeleted(String),
