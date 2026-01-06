@@ -4,8 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+image = { version = "0.25", default-features = false, features = ["png"] }
 libc = { version = "0.2", default-features = false }
-ratatui = { version = "0.30.0-alpha.2", default-features = false, features = ["crossterm"] }
+notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
+ratatui = { git = "https://github.com/gcavelier/ratatui.git", branch = "fix-buffer-diff-vs16", default-features = false, features = ["crossterm", "unstable-rendered-line-info"] }
+#ratatui = { version = "0.30", default-features = false, features = ["crossterm", "unstable-rendered-line-info"] }
+ratatui-image = { version = "10", default-features = false, features = ["image-defaults", "crossterm"] }
 
 [profile.release]
 strip = true	    # Automatically strip symbols from the binary

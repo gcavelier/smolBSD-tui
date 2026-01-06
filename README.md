@@ -7,13 +7,14 @@ It is written in Rust using the [ratatui](https://ratatui.rs/) library
 # Features
 - [X] Start a VM
 - [X] Stop a VM
-- [X] Refresh vms/kernels/images every 2s
 - [X] Delete a vm
-- [X] Popups size should be calculated from their content's size
 - [ ] Add scrollbar on popups when needed
+    - cf https://docs.rs/ratatui/0.30.0-alpha.5/ratatui/widgets/struct.Scrollbar.html#examples
+    - `src/ui/ui.rs`, `get_centered_area_fit_to_content()` and `render_confirmation_popup()`
 - [ ] Create a new VM
 - [ ] Edit an exiting VM
 - [ ] Display the CPU usage
+- [ ] Use the `notify` crates to reload the app state when a file changes in `etc/`, `images/` or `kernel/`
 - [ ] Connect to the console
 - [ ] Filter kernels/images filenames
 - [ ] Add smolBSD logo in the top right corner
