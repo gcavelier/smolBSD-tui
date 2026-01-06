@@ -40,11 +40,11 @@ pub fn get_base_dir() -> Option<String> {
         Some(
             Path::new(&base_dir)
                 .canonicalize()
-                .expect(&format!("Failed to canonicalize {base_dir}"))
+                .unwrap_or_else(|_| panic!("Failed to canonicalize {base_dir}"))
                 .to_str()
-                .expect(&format!(
-                    "Failed to convert canonicalized path ({base_dir}) to a String"
-                ))
+                .unwrap_or_else(|| {
+                    panic!("Failed to convert canonicalized path ({base_dir}) to a String")
+                })
                 .to_string()
                 + "/",
         )

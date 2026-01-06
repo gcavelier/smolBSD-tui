@@ -220,9 +220,6 @@ impl Vm {
     }
 
     pub fn is_running(&self) -> bool {
-        match self.state {
-            VmState::Running { .. } => true,
-            _ => false,
-        }
+        matches!(self.state, VmState::Running { .. })
     }
 }

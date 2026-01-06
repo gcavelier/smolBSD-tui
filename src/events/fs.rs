@@ -32,24 +32,21 @@ pub fn get_fs_events(app_tx: Sender<AppEvent>, base_dir: String) {
                 notify::EventKind::Any
                 | notify::EventKind::Access(_)
                 | notify::EventKind::Other => {}
-                notify::EventKind::Create(create_kind) => match create_kind {
-                    notify::event::CreateKind::File => {
+                notify::EventKind::Create(create_kind) => {
+                    if create_kind == notify::event::CreateKind::File {
                         send_file_event(&base_dir, &app_tx, event.paths, FileOperation::Created)
                     }
-                    _ => {}
-                },
-                notify::EventKind::Modify(modify_kind) => match modify_kind {
-                    notify::event::ModifyKind::Data(_) => {
+                }
+                notify::EventKind::Modify(modify_kind) => {
+                    if let notify::event::ModifyKind::Data(_) = modify_kind {
                         send_file_event(&base_dir, &app_tx, event.paths, FileOperation::Modified)
                     }
-                    _ => {}
-                },
-                notify::EventKind::Remove(remove_kind) => match remove_kind {
-                    notify::event::RemoveKind::File => {
+                }
+                notify::EventKind::Remove(remove_kind) => {
+                    if remove_kind == notify::event::RemoveKind::File {
                         send_file_event(&base_dir, &app_tx, event.paths, FileOperation::Deleted)
                     }
-                    _ => {}
-                },
+                }
             },
             Err(e) => eprintln!("watch error: {:?}", e),
         }
@@ -75,52 +72,51 @@ fn send_file_event(
         return;
     }
 
-    if let Some(path) = paths.into_iter().nth(0) {
-        if let Ok(filename) = path
+    if let Some(path) = paths.into_iter().next()
+        && let Ok(filename) = path
             .strip_prefix(base_dir)
             .map(|value| value.to_str().unwrap_or(""))
+    {
+        let event = if let Some(filename) = filename.strip_prefix("etc/") {
+            // VM configuration file
+            let filename = filename.to_owned();
+            Some(match operation {
+                FileOperation::Created => AppEvent::VmConfCreated(filename),
+                FileOperation::Modified => AppEvent::VmConfModified(filename),
+                FileOperation::Deleted => AppEvent::VmConfDeleted(filename),
+            })
+        } else if let Some(filename) = filename.strip_prefix("images/") {
+            // image file
+            let filename = filename.to_owned();
+            Some(match operation {
+                FileOperation::Created => AppEvent::ImageFileCreated(filename),
+                FileOperation::Modified => AppEvent::ImageFileModified(filename),
+                FileOperation::Deleted => AppEvent::ImageFileDeleted(filename),
+            })
+        } else if let Some(filename) = filename.strip_prefix("kernels/") {
+            // kernel file
+            let filename = filename.to_owned();
+            Some(match operation {
+                FileOperation::Created => AppEvent::KernelCreated(filename),
+                FileOperation::Modified => AppEvent::KernelModified(filename),
+                FileOperation::Deleted => AppEvent::KernelDeleted(filename),
+            })
+        } else if let Some(vmname) = filename.strip_prefix("qemu-")
+            && let Some(vmname) = vmname.strip_suffix(".pid")
         {
-            let event = if let Some(filename) = filename.strip_prefix("etc/") {
-                // VM configuration file
-                let filename = filename.to_owned();
-                Some(match operation {
-                    FileOperation::Created => AppEvent::VmConfCreated(filename),
-                    FileOperation::Modified => AppEvent::VmConfModified(filename),
-                    FileOperation::Deleted => AppEvent::VmConfDeleted(filename),
-                })
-            } else if let Some(filename) = filename.strip_prefix("images/") {
-                // image file
-                let filename = filename.to_owned();
-                Some(match operation {
-                    FileOperation::Created => AppEvent::ImageFileCreated(filename),
-                    FileOperation::Modified => AppEvent::ImageFileModified(filename),
-                    FileOperation::Deleted => AppEvent::ImageFileDeleted(filename),
-                })
-            } else if let Some(filename) = filename.strip_prefix("kernels/") {
-                // kernel file
-                let filename = filename.to_owned();
-                Some(match operation {
-                    FileOperation::Created => AppEvent::KernelCreated(filename),
-                    FileOperation::Modified => AppEvent::KernelModified(filename),
-                    FileOperation::Deleted => AppEvent::KernelDeleted(filename),
-                })
-            } else if let Some(vmname) = filename.strip_prefix("qemu-")
-                && let Some(vmname) = vmname.strip_suffix(".pid")
-            {
-                // QEMU PID file
-                let vmname = vmname.to_owned();
-                match operation {
-                    FileOperation::Created => None,
-                    FileOperation::Modified => None,
-                    FileOperation::Deleted => Some(AppEvent::PidFileDeleted(vmname)),
-                }
-            } else {
-                None
-            };
-
-            if let Some(event) = event {
-                app_tx.send(event).unwrap();
+            // QEMU PID file
+            let vmname = vmname.to_owned();
+            match operation {
+                FileOperation::Created => None,
+                FileOperation::Modified => None,
+                FileOperation::Deleted => Some(AppEvent::PidFileDeleted(vmname)),
             }
+        } else {
+            None
+        };
+
+        if let Some(event) = event {
+            app_tx.send(event).unwrap();
         }
     }
 }
