@@ -200,4 +200,37 @@ impl State {
             }
         }
     }
+
+    /// `conf_file` **must** be an absolute path
+    pub fn delete_vm(&mut self, conf_file: &str) {
+        let relative_conf_file = conf_file.strip_prefix(&self.base_dir).unwrap();
+
+        if let Some(vm_name) = relative_conf_file
+            .strip_prefix("etc/")
+            .and_then(|value| value.strip_suffix(".conf"))
+        {
+            if let Some(vm) = self
+                .vms
+                .iter_mut()
+                .find(|item| item.name.as_str() == vm_name)
+            {
+                if vm.is_running() {
+                    // The VM is running, we must kill it first!
+                    let _ = vm.kill().map_err(|err| {
+                        self.tx
+                            .send(AppEvent::KillFailed {
+                                vm_name: vm.name.clone(),
+                                error: err,
+                            })
+                            .unwrap()
+                    });
+                    vm.state = VmState::StoppingToDelete;
+                    // The VM will be deleted when the PID file will be deleted, not right now
+                } else {
+                    // The VM is not running, we can delete it right away
+                    self.vms.retain(|item| item.name != vm_name);
+                }
+            }
+        }
+    }
 }
